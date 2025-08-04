@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flutter Integration Test Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .stack-trace-collapsed {
+      max-height: 3.6em; /* approx. 2 lines */
+      overflow: hidden;
+    }
+    .toggle-btn {
+      cursor: pointer;
+      color: #2563eb; /* Tailwind blue-600 */
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">📊 Flutter Integration Test Report</h1>
+
+    <div id="summary" class="mb-6 text-lg"></div>
+    <div id="report"></div>
+  </div>
+
+  <script>
+    const data = {"results":[{"testName":"Check Welcome Message","suite":"Login End to End","status":"passed","duration":721,"filePath":"app_test.dart","lineNumber":22},{"testName":"Check Profile Page","suite":"Login End to End","status":"passed","duration":333,"filePath":"app_test.dart","lineNumber":31},{"testName":"Check Home Page","suite":"Login End to End","status":"passed","duration":288,"filePath":"app_test.dart","lineNumber":40},{"testName":"Check For the Welcome message","status":"failed","suite":"Login Error Message","reason":"Expected a widget with key `welcome_card1`, but none were found.","stackTrace":"dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/errors.dart 288:3  throw_\npackages/matcher/src/expect/expect.dart 149:31                               fail\npackages/matcher/src/expect/expect.dart 144:3                                _expect\npackages/matcher/src/expect/expect.dart 56:3                                 expect$\npackages/flutter_test/src/widget_tester.dart 480:18                          expect$\napp_test.dart 60:7                                                           <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 610:19          <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 634:23          <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 581:31          <fn>\ndart-sdk/lib/async/zone.dart 1422:47                                         _rootRunUnary\ndart-sdk/lib/async/zone.dart 1324:19                                         runUnary\ndart-sdk/lib/async/future_impl.dart 204:18                                   handleValue\ndart-sdk/lib/async/future_impl.dart 902:44                                   handleValueCallback\ndart-sdk/lib/async/future_impl.dart 931:13                                   _propagateToListeners\ndart-sdk/lib/async/future_impl.dart 707:5                                    [_completeWithValue]\ndart-sdk/lib/async/future_impl.dart 777:7                                    <fn>\ndart-sdk/lib/async/zone.dart 1414:13                                         _rootRun\ndart-sdk/lib/async/zone.dart 1317:19                                         run\ndart-sdk/lib/async/zone.dart 1225:7                                          runGuarded\ndart-sdk/lib/async/zone.dart 1265:23                                         callback\ndart-sdk/lib/async/schedule_microtask.dart 40:11                             _microtaskLoop\ndart-sdk/lib/async/schedule_microtask.dart 49:5                              _startMicrotaskLoop\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 186:7           <fn>\n","duration":322,"filePath":"expect.dart","lineNumber":149},{"testName":"Check For the Welcome message","status":"failed","suite":"Login Error Message","reason":"Expected a widget with key `welcome_card1`, but none were found.","stackTrace":"dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/errors.dart 288:3  throw_\npackages/matcher/src/expect/expect.dart 149:31                               fail\npackages/matcher/src/expect/expect.dart 144:3                                _expect\npackages/matcher/src/expect/expect.dart 56:3                                 expect$\npackages/flutter_test/src/widget_tester.dart 480:18                          expect$\napp_test.dart 77:7                                                           <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 610:19          <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 634:23          <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 581:31          <fn>\ndart-sdk/lib/async/zone.dart 1422:47                                         _rootRunUnary\ndart-sdk/lib/async/zone.dart 1324:19                                         runUnary\ndart-sdk/lib/async/future_impl.dart 204:18                                   handleValue\ndart-sdk/lib/async/future_impl.dart 902:44                                   handleValueCallback\ndart-sdk/lib/async/future_impl.dart 931:13                                   _propagateToListeners\ndart-sdk/lib/async/future_impl.dart 707:5                                    [_completeWithValue]\ndart-sdk/lib/async/future_impl.dart 777:7                                    <fn>\ndart-sdk/lib/async/zone.dart 1414:13                                         _rootRun\ndart-sdk/lib/async/zone.dart 1317:19                                         run\ndart-sdk/lib/async/zone.dart 1225:7                                          runGuarded\ndart-sdk/lib/async/zone.dart 1265:23                                         callback\ndart-sdk/lib/async/schedule_microtask.dart 40:11                             _microtaskLoop\ndart-sdk/lib/async/schedule_microtask.dart 49:5                              _startMicrotaskLoop\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 186:7           <fn>\n","duration":298,"filePath":"expect.dart","lineNumber":149}]};
+
+    const grouped = {};
+    data.results.forEach(test => {
+      const suite = test.suite || "Default Suite";
+      if (!grouped[suite]) grouped[suite] = [];
+      grouped[suite].push(test);
+    });
+
+    const totalTests = data.results.length;
+    const passedTests = data.results.filter(t => t.status === "passed").length;
+    const failedTests = data.results.filter(t => t.status === "failed").length;
+    const passPercentage = totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(1) : '0.0';
+
+    const reportDiv = document.getElementById("report");
+    const summaryDiv = document.getElementById("summary");
+    summaryDiv.innerHTML = `
+      <p>Total Suites: <strong>${Object.keys(grouped).length}</strong></p>
+      <p>Total Tests: <strong>${totalTests}</strong></p>
+      <p>✅ Passed: <strong>${passedTests}</strong></p>
+      <p>❌ Failed: <strong>${failedTests}</strong></p>
+    `;
+
+    Object.entries(grouped).forEach(([suite, tests]) => {
+      const passed = tests.filter(t => t.status === "passed");
+      const failed = tests.filter(t => t.status === "failed");
+
+      const suiteSection = document.createElement("div");
+      suiteSection.className = "mb-8 bg-white p-4 rounded shadow";
+
+      suiteSection.innerHTML = `
+        <h2 class="text-xl font-semibold mb-2">📦 Suite: ${suite}</h2>
+        <p class="text-green-600 font-medium">✅ Passed (${passed.length})</p>
+        <ul class="list-disc list-inside text-green-800 mb-4">
+          ${passed.map(t => `<li>${t.testName}</li>`).join("")}
+        </ul>
+        <p class="text-red-600 font-medium">❌ Failed (${failed.length})</p>
+        <ul class="list-disc list-inside text-red-800">
+          ${failed.map((t, index) => {
+            const escapedStack = (t.stackTrace || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `
+              <li>
+                <span class="font-semibold">${t.testName}</span>
+                <div class="ml-4">
+                  <p><strong>• Reason:</strong> ${t.reason ?? 'N/A'}</p>
+                  <pre id="trace-${index}" class="stack-trace-collapsed bg-gray-200 p-2 rounded text-sm mt-2 whitespace-pre-wrap">${escapedStack}</pre>
+                  <span class="toggle-btn" onclick="toggleStackTrace('trace-${index}', this)">Show more</span>
+                </div>
+              </li>
+            `;
+          }).join("")}
+        </ul>
+      `;
+
+      reportDiv.appendChild(suiteSection);
+    });
+
+    function toggleStackTrace(id, el) {
+      const pre = document.getElementById(id);
+      const isCollapsed = pre.classList.contains('stack-trace-collapsed');
+      if (isCollapsed) {
+        pre.classList.remove('stack-trace-collapsed');
+        el.textContent = 'Show less';
+      } else {
+        pre.classList.add('stack-trace-collapsed');
+        el.textContent = 'Show more';
+      }
+    }
+  </script>
+</body>
+</html>
