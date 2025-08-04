@@ -3,12 +3,9 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 
-
 import 'html_report_generator.dart';
 
-
 void run(List<String> arguments) async {
-
   final parser = ArgParser()
     ..addCommand('test')
     ..addFlag('web', abbr: 'w', negatable: false, help: 'Run on Flutter Web');
@@ -16,8 +13,8 @@ void run(List<String> arguments) async {
 
   final flutterProjectDir = Directory.current.path;
 
-
-  final driverFile = File('$flutterProjectDir/test_driver/integration_test.dart');
+  final driverFile =
+      File('$flutterProjectDir/test_driver/integration_test.dart');
   final targetFile = File('$flutterProjectDir/integration_test/app_test.dart');
 
   if (!driverFile.existsSync()) {
@@ -65,7 +62,8 @@ void run(List<String> arguments) async {
 
         try {
           final reportData = json.decode(buffer.toString());
-          final outputFile = File('$flutterProjectDir/testmate-report/report.json');
+          final outputFile =
+              File('$flutterProjectDir/testmate-report/report.json');
           outputFile.createSync(recursive: true);
           outputFile.writeAsStringSync(
               jsonEncode(reportData, toEncodable: _safeJson));
@@ -73,8 +71,8 @@ void run(List<String> arguments) async {
           final reportJsonFile =
               File('$flutterProjectDir/testmate-report/report.json');
           final results = jsonDecode(reportJsonFile.readAsStringSync());
-          generateHtmlReport(
-              results, '$flutterProjectDir/testmate-report/testmate_report.html');
+          generateHtmlReport(results,
+              '$flutterProjectDir/testmate-report/testmate_report.html');
         } catch (e) {
           stderr.writeln('❌ Failed to parse report: $e');
         }

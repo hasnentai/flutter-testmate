@@ -16,5 +16,8 @@ dependencies:
   integration_test:
     sdk: flutter
 
+# Mark this as not for publishing
+publish_to: none
+
 dev_dependencies:
   lints: ^5.0.0 

@@ -21,7 +21,8 @@ class ErrorSummarizer {
     }
 
     // Icon Finder
-    final iconFinderRegex = RegExp(r'Found 0 widgets with icon IconData\(U\+([0-9A-Fa-f]+)\)');
+    final iconFinderRegex =
+        RegExp(r'Found 0 widgets with icon IconData\(U\+([0-9A-Fa-f]+)\)');
     final iconMatch = iconFinderRegex.firstMatch(reason);
     if (iconMatch != null) {
       final iconCode = iconMatch.group(1);
@@ -37,7 +38,8 @@ class ErrorSummarizer {
     }
 
     // Semantics Finder
-    final semanticsFinderRegex = RegExp(r'Found 0 widgets with semantics label "(.*?)"');
+    final semanticsFinderRegex =
+        RegExp(r'Found 0 widgets with semantics label "(.*?)"');
     final semanticsMatch = semanticsFinderRegex.firstMatch(reason);
     if (semanticsMatch != null) {
       final semanticsLabel = semanticsMatch.group(1);
@@ -61,7 +63,8 @@ class ErrorSummarizer {
     }
 
     // Predicate Finder (custom finders)
-    final predicateFinderRegex = RegExp(r'Found 0 widgets with predicate "(.*?)"');
+    final predicateFinderRegex =
+        RegExp(r'Found 0 widgets with predicate "(.*?)"');
     final predicateMatch = predicateFinderRegex.firstMatch(reason);
     if (predicateMatch != null) {
       final predicate = predicateMatch.group(1);
@@ -69,14 +72,16 @@ class ErrorSummarizer {
     }
 
     // Ancestor/Descendant Finder
-    final ancestorFinderRegex = RegExp(r'Found 0 widgets with ancestor of type (\w+)');
+    final ancestorFinderRegex =
+        RegExp(r'Found 0 widgets with ancestor of type (\w+)');
     final ancestorMatch = ancestorFinderRegex.firstMatch(reason);
     if (ancestorMatch != null) {
       final ancestorType = ancestorMatch.group(1);
       return 'Expected a widget with ancestor of type `$ancestorType`, but none were found.';
     }
 
-    final descendantFinderRegex = RegExp(r'Found 0 widgets with descendant of type (\w+)');
+    final descendantFinderRegex =
+        RegExp(r'Found 0 widgets with descendant of type (\w+)');
     final descendantMatch = descendantFinderRegex.firstMatch(reason);
     if (descendantMatch != null) {
       final descendantType = descendantMatch.group(1);
@@ -84,7 +89,8 @@ class ErrorSummarizer {
     }
 
     // ByValueKey Finder
-    final valueKeyFinderRegex = RegExp(r"Found 0 widgets with key ValueKey\((.+?)\)");
+    final valueKeyFinderRegex =
+        RegExp(r"Found 0 widgets with key ValueKey\((.+?)\)");
     final valueKeyMatch = valueKeyFinderRegex.firstMatch(reason);
     if (valueKeyMatch != null) {
       final valueKey = valueKeyMatch.group(1);
@@ -101,7 +107,8 @@ class ErrorSummarizer {
     }
 
     // Multiple widgets found (when expecting exactly one)
-    final multipleWidgetsRegex = RegExp(r'Expected: exactly one matching candidate\n\s+Actual: _(\w+)WidgetFinder:<Found (\d+) widgets');
+    final multipleWidgetsRegex = RegExp(
+        r'Expected: exactly one matching candidate\n\s+Actual: _(\w+)WidgetFinder:<Found (\d+) widgets');
     final multipleMatch = multipleWidgetsRegex.firstMatch(reason);
     if (multipleMatch != null) {
       final finderType = multipleMatch.group(1);
@@ -110,7 +117,8 @@ class ErrorSummarizer {
     }
 
     // Widget count mismatch
-    final countMismatchRegex = RegExp(r'Expected: (\d+) matching candidates\n\s+Actual: _(\w+)WidgetFinder:<Found (\d+) widgets');
+    final countMismatchRegex = RegExp(
+        r'Expected: (\d+) matching candidates\n\s+Actual: _(\w+)WidgetFinder:<Found (\d+) widgets');
     final countMatch = countMismatchRegex.firstMatch(reason);
     if (countMatch != null) {
       final expected = countMatch.group(1);
@@ -152,9 +160,9 @@ class ErrorSummarizer {
 
   /// Checks if the error is related to widget finding
   static bool isWidgetFinderError(String reason) {
-    return reason.contains('Found 0 widgets') || 
-           reason.contains('Expected: exactly one matching candidate') ||
-           reason.contains('Expected:') && reason.contains('Actual:');
+    return reason.contains('Found 0 widgets') ||
+        reason.contains('Expected: exactly one matching candidate') ||
+        reason.contains('Expected:') && reason.contains('Actual:');
   }
 
   /// Gets a suggestion for fixing the error based on the error type
@@ -176,4 +184,4 @@ class ErrorSummarizer {
     }
     return 'Review the widget tree structure and ensure the expected widget is present.';
   }
-} 
+}
