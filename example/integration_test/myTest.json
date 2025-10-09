@@ -1,0 +1,31 @@
+{
+    "testSuites": [
+        {
+            "testSuite": "Taxpayer Form Integration Tests",
+            "testWidgets": [
+                {
+                    "testName": "Should enter text in PAN field",
+                    "testSuite": "Taxpayer Form Integration Tests",
+                    "expectFailed": [],
+                    "status": "Passed",
+                    "timestamp": "2025-10-09T12:43:43.261"
+                },
+                {
+                    "testName": "Should have form elements",
+                    "testSuite": "Taxpayer Form Integration Tests",
+                    "expectFailed": [
+                        "Expected: exactly one matching candidate\n  Actual: _TypeWidgetFinder:<Found 0 widgets with type \"Form\": []>\n   Which: means none were found but one was expected\n",
+                        "Expected: exactly one matching candidate\n  Actual: _TypeWidgetFinder:<Found 0 widgets with type \"AppBar\": []>\n   Which: means none were found but one was expected\n"
+                    ],
+                    "status": "Failed",
+                    "timestamp": "2025-10-09T12:43:47.464"
+                }
+            ]
+        }
+    ],
+    "summary": {
+        "totalTests": 2,
+        "passedTests": 1,
+        "failedTests": 1
+    }
+}

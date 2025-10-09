@@ -1,7 +1,65 @@
 import 'dart:convert';
 import 'dart:io';
 
-void generateHtmlReport(List<dynamic> results, String outputPath) {
+void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
+  // Normalize input: accept either a flat List of test results or the
+  // SafeExpect summary Map with testSuites/testWidgets.
+  List<dynamic> results;
+  if (resultsOrMap is List) {
+    results = resultsOrMap;
+  } else if (resultsOrMap is Map<String, dynamic>) {
+    final List<dynamic> suites =
+        (resultsOrMap['testSuites'] as List?) ?? const <dynamic>[];
+    final List<Map<String, dynamic>> flattened = <Map<String, dynamic>>[];
+
+    for (final dynamic suiteEntry in suites) {
+      if (suiteEntry is Map<String, dynamic>) {
+        final String suiteName = (suiteEntry['testSuite'] as String?) ?? 'Default Suite';
+        final List<dynamic> tests =
+            (suiteEntry['testWidgets'] as List?) ?? const <dynamic>[];
+
+        for (final dynamic testEntry in tests) {
+          if (testEntry is Map<String, dynamic>) {
+            final String statusRaw = (testEntry['status'] as String?) ?? 'passed';
+            final String status = statusRaw.toLowerCase();
+            final dynamic expectFailed = testEntry['expectFailed'];
+            // Summary reason (first failure if array of objects)
+            String? reason;
+            if (expectFailed is List && expectFailed.isNotEmpty) {
+              final first = expectFailed.first;
+              if (first is Map && first['reason'] != null) {
+                reason = first['reason'].toString();
+              } else {
+                reason = expectFailed.join('\n');
+              }
+            } else if (expectFailed is String) {
+              reason = expectFailed;
+            } else {
+              reason = (testEntry['reason'] as String?) ?? '';
+            }
+
+            flattened.add(<String, dynamic>{
+              'testName': testEntry['testName'],
+              'suite': suiteName,
+              'status': status,
+              'reason': reason,
+              // Preserve per-expect failures array for rich rendering
+              'expectFailed': (expectFailed is List) ? expectFailed : <dynamic>[],
+              'stackTrace': testEntry['stackTrace'] ?? '',
+              'filePath': testEntry['filePath'],
+              'lineNumber': testEntry['lineNumber'],
+              'screenshotPath': testEntry['screenshotPath'],
+            });
+          }
+        }
+      }
+    }
+    results = flattened;
+    print("Results: $results");
+  } else {
+    // Fallback: unknown shape; render empty
+    results = const <dynamic>[];
+  }
   final html = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -47,6 +105,52 @@ void generateHtmlReport(List<dynamic> results, String outputPath) {
         '</div>';
       
       document.body.appendChild(modal);
+    }
+
+    // Escape HTML
+    function escapeHtml(str) {
+      return (str || '').toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // Format matcher-style reason into clearer sections
+    function formatReason(reason) {
+      if (!reason) return '';
+      const text = reason.toString();
+      const lines = text.split('\\n');
+      const expectedLine = lines.find(l => l.trim().startsWith('Expected:')) || '';
+      const actualLine   = lines.find(l => l.trim().startsWith('  Actual:')) || '';
+      const whichLine    = lines.find(l => l.trim().startsWith('   Which:')) || '';
+
+      // If we detect Expected/Actual/Which, render structured view
+      if (expectedLine || actualLine || whichLine) {
+        const expected = escapeHtml(expectedLine.replace(/^\s*Expected:\s*/, ''));
+        const actual = escapeHtml(actualLine.replace(/^\s*Actual:\s*/, ''));
+        const which = escapeHtml(whichLine.replace(/^\s*Which:\s*/, ''));
+
+        let html = '<div class="mt-1 text-sm space-y-1">';
+        if (expected) {
+          html += '<div><span class="font-medium">Expected:</span> <code class="bg-gray-100 px-1 py-0.5 rounded">' + expected + '</code></div>';
+        }
+        if (actual) {
+          html += '<div><span class="font-medium">Actual:</span> <code class="bg-gray-100 px-1 py-0.5 rounded">' + actual + '</code></div>';
+        }
+        if (which) {
+          html += '<div><span class="font-medium">Why:</span> ' + which + '</div>';
+        }
+        // Show the rest (if any) in a compact pre block
+        const rest = lines.filter(l => !l.trim().startsWith('Expected:') && !l.trim().startsWith('Actual:') && !l.trim().startsWith('Which:')).join('\\n').trim();
+        if (rest) {
+          html += '<pre class="bg-gray-100 rounded p-2 whitespace-pre-wrap text-xs">' + escapeHtml(rest) + '</pre>';
+        }
+        html += '</div>';
+        return html;
+      }
+
+      // Default: preserve line breaks
+      return '<pre class="bg-gray-100 rounded p-2 whitespace-pre-wrap text-sm">' + escapeHtml(text) + '</pre>';
     }
     
     const data = ${jsonEncode({'results': results})};
@@ -136,49 +240,75 @@ void generateHtmlReport(List<dynamic> results, String outputPath) {
         if (test.status === 'passed') {
           htmlBody += '<li class="text-green-800 mb-2">✅ ' + test.testName + ' <span class="text-xs text-gray-500">(' + testNumber + '/' + totalTests + ')</span></li>';
         } else {
-          const preId = 'trace-' + testIndex++;
-          const fullStack = test.stackTrace || '';
-          const shortStack = fullStack.split('\\n').slice(0, 3).join('\\n');
-          const hasLocation = test.filePath && test.lineNumber;
-          
-          htmlBody += 
-            '<li class="text-red-800 mb-2">' +
-              '<span class="font-semibold">❌ ' + test.testName + ' <span class="text-xs text-gray-500">(' + testNumber + '/' + totalTests + ')</span></span>' +
-            '<div class="ml-4">' +
-              '<p><strong>• Reason:</strong> ' + test.reason + '</p>';
-        
-        if (hasLocation) {
-          htmlBody += 
-            '<p class="mt-2">' +
-              '<button onclick="navigateToTest(\\'' + test.filePath + '\\', ' + test.lineNumber + ')" ' +
-                      'class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">' +
+          // New: render each failed expect independently if present
+          const failures = Array.isArray(test.expectFailed) ? test.expectFailed : [];
+          htmlBody += '<li class="text-red-800 mb-2">' +
+            '<span class="font-semibold">❌ ' + test.testName + ' <span class="text-xs text-gray-500">(' + testNumber + '/' + totalTests + ')</span></span>' +
+            '<div class="ml-4">';
+
+          if (failures.length > 0) {
+            failures.forEach((f) => {
+              const preId = 'trace-' + (testIndex++);
+              const fullStack = (f.stackTrace || '').toString();
+              const shortStack = fullStack.split('\\n').slice(0, 3).join('\\n');
+              const hasLocation = !!(f.filePath && f.lineNumber);
+
+              htmlBody += '<div class="mb-3 p-2 rounded border bg-white">';
+              if (f.reason) {
+                htmlBody += '<div><strong>• Reason:</strong> ' + formatReason(f.reason) + '</div>';
+              }
+              if (hasLocation) {
+                htmlBody += '<p class="mt-2">' +
+                  '<button onclick="navigateToTest(\\'' + f.filePath + '\\', ' + f.lineNumber + ')" ' +
+                  'class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">' +
+                  '🔍 Open in IDE (Line ' + f.lineNumber + ')' +
+                  '</button>' +
+                  '<span class="text-xs text-gray-500 ml-2">File: ' + f.filePath + '</span>' +
+                '</p>';
+              } else {
+                htmlBody += '<p class="text-xs text-gray-500 mt-2">⚠️ Could not determine file location</p>';
+              }
+              if (fullStack) {
+                htmlBody += '<pre id="' + preId + '" class="bg-gray-200 p-2 rounded text-sm mt-2 whitespace-pre-wrap overflow-hidden max-h-24" data-full-stack="' + fullStack.replace(/"/g, '&quot;') + '">' + shortStack + '</pre>' +
+                  '<button onclick="toggleTrace(\\'' + preId + '\\', this)" class="text-xs text-gray-500 hover:text-gray-700 mt-1 cursor-pointer">📄 Show more logs</button>';
+              }
+              htmlBody += '</div>';
+            });
+          } else {
+            // Fallback legacy single error rendering
+            const preId = 'trace-' + (testIndex++);
+            const fullStack = (test.stackTrace || '').toString();
+            const shortStack = fullStack.split('\\n').slice(0, 3).join('\\n');
+            const hasLocation = !!(test.filePath && test.lineNumber);
+            htmlBody += '<div><strong>• Reason:</strong> ' + formatReason(test.reason || '') + '</div>';
+            if (hasLocation) {
+              htmlBody += '<p class="mt-2">' +
+                '<button onclick="navigateToTest(\\'' + test.filePath + '\\', ' + test.lineNumber + ')" ' +
+                'class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">' +
                 '🔍 Open in IDE (Line ' + test.lineNumber + ')' +
-              '</button>' +
-              '<span class="text-xs text-gray-500 ml-2">File: ' + test.filePath + '</span>' +
-            '</p>';
-        } else {
-          htmlBody += '<p class="text-xs text-gray-500 mt-2">⚠️ Could not determine file location</p>';
-        }
-        
-        htmlBody += 
-              '<pre id="' + preId + '" class="bg-gray-200 p-2 rounded text-sm mt-2 whitespace-pre-wrap overflow-hidden max-h-24" data-full-stack="' + fullStack.replace(/"/g, '&quot;') + '">' + shortStack + '</pre>' +
-              '<button onclick="toggleTrace(\\'' + preId + '\\', this)" class="text-xs text-gray-500 hover:text-gray-700 mt-1 cursor-pointer">📄 Show more logs</button>';
-        
-        // Add screenshot if available
-        if (test.screenshotPath) {
-          htmlBody += 
-            '<div class="mt-4">' +
-              '<p class="text-sm font-medium text-gray-700 mb-2">📸 Screenshot at failure:</p>' +
-              '<div class="border border-gray-300 rounded-lg overflow-hidden">' +
-                '<img src="' + test.screenshotPath + '" alt="Test failure screenshot" class="w-full max-w-md cursor-pointer hover:opacity-90 transition-opacity" onclick="openScreenshotModal(this.src)" />' +
-              '</div>' +
-              '<p class="text-xs text-gray-500 mt-1">Click to view full size</p>' +
-            '</div>';
-        }
-        
-        htmlBody += 
-            '</div>' +
-          '</li>';
+                '</button>' +
+                '<span class="text-xs text-gray-500 ml-2">File: ' + test.filePath + '</span>' +
+              '</p>';
+            }
+            if (fullStack) {
+              htmlBody += '<pre id="' + preId + '" class="bg-gray-200 p-2 rounded text-sm mt-2 whitespace-pre-wrap overflow-hidden max-h-24" data-full-stack="' + fullStack.replace(/"/g, '&quot;') + '">' + shortStack + '</pre>' +
+                '<button onclick="toggleTrace(\\'' + preId + '\\', this)" class="text-xs text-gray-500 hover:text-gray-700 mt-1 cursor-pointer">📄 Show more logs</button>';
+            }
+          }
+
+          // Screenshot if available
+          if (test.screenshotPath) {
+            htmlBody += 
+              '<div class="mt-4">' +
+                '<p class="text-sm font-medium text-gray-700 mb-2">📸 Screenshot at failure:</p>' +
+                '<div class="border border-gray-300 rounded-lg overflow-hidden">' +
+                  '<img src="' + test.screenshotPath + '" alt="Test failure screenshot" class="w-full max-w-md cursor-pointer hover:opacity-90 transition-opacity" onclick="openScreenshotModal(this.src)" />' +
+                '</div>' +
+                '<p class="text-xs text-gray-500 mt-1">Click to view full size</p>' +
+              '</div>';
+          }
+
+          htmlBody += '</div></li>';
         }
       });
       

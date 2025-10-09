@@ -1,3 +1,3 @@
 library testmate;
 
-export 'src/reporter.dart';
+export 'src/safe_expect.dart';

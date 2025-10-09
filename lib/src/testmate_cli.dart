@@ -6,6 +6,7 @@ import 'package:args/args.dart';
 import 'html_report_generator.dart';
 
 void run(List<String> arguments) async {
+  print("Helllooooooooooooooo");
   final parser = ArgParser()
     ..addCommand('test')
     ..addFlag('web', abbr: 'w', negatable: false, help: 'Run on Flutter Web');
@@ -26,11 +27,12 @@ void run(List<String> arguments) async {
     exit(1);
   }
 
+
   if (results.command?.name == 'test') {
     final runCommand =
         'flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d chrome';
 
-    print('🧪 Running: $runCommand');
+   
     final process = await Process.start(
       'flutter',
       [
@@ -39,45 +41,45 @@ void run(List<String> arguments) async {
         '--target=integration_test/app_test.dart',
         '-d',
         'chrome',
+        '--headless'
       ],
       workingDirectory: flutterProjectDir,
       runInShell: true,
     );
 
-    final buffer = StringBuffer(); // Added: to capture report block
-    bool capturing = false;
+    final buffer = StringBuffer(); // To capture SafeExpect JSON
+    bool capturingJson = false;
 
-    // Updated: handle stdout and capture test report
+    // Handle stdout and capture SafeExpect JSON
     process.stdout
         .transform(utf8.decoder)
         .transform(const LineSplitter())
         .listen((line) async {
       stdout.writeln(line); // Print live logs
 
-      if (line.contains('@@TEST_REPORT@@START')) {
-        capturing = true;
+      // Capture SafeExpect JSON output
+      if (line.contains('Test Results JSON:')) {
+        capturingJson = true;
         buffer.clear();
-      } else if (line.contains('@@TEST_REPORT@@END')) {
-        capturing = false;
-
-        try {
-          final reportData = json.decode(buffer.toString());
-          final outputFile =
-              File('$flutterProjectDir/testmate-report/report.json');
-          outputFile.createSync(recursive: true);
-          outputFile.writeAsStringSync(
-              jsonEncode(reportData, toEncodable: _safeJson));
-          print('✅ Report saved to testmate-report/report.json');
-          final reportJsonFile =
-              File('$flutterProjectDir/testmate-report/report.json');
-          final results = jsonDecode(reportJsonFile.readAsStringSync());
-          generateHtmlReport(results,
-              '$flutterProjectDir/testmate-report/testmate_report.html');
-        } catch (e) {
-          stderr.writeln('❌ Failed to parse report: $e');
+      } else if (capturingJson && line.trim().isNotEmpty) {
+        // Check if this line is valid JSON (starts with { and ends with })
+        final trimmedLine = line.trim();
+        if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
+          try {
+            // Validate it's proper JSON
+            json.decode(trimmedLine);
+            buffer.write(trimmedLine);
+            capturingJson = false;
+            
+            // Save the SafeExpect JSON to testmate-reports/report.json
+            _saveSafeExpectJson(buffer.toString(), flutterProjectDir);
+          } catch (e) {
+            // If not valid JSON, continue capturing
+            buffer.writeln(line);
+          }
+        } else {
+          buffer.writeln(line);
         }
-      } else if (capturing) {
-        buffer.writeln(line);
       }
     });
 
@@ -85,6 +87,7 @@ void run(List<String> arguments) async {
     process.stderr.transform(utf8.decoder).listen(stderr.writeln);
 
     final exitCode = await process.exitCode;
+    print('\n🎯 Test execution completed!');
     if (exitCode != 0) {
       print('❌ Test failed with exit code $exitCode');
     } else {
@@ -92,12 +95,38 @@ void run(List<String> arguments) async {
     }
   } else {
     print('❌ Invalid command.\n');
-    print(parser.usage);
+    print('Use "testmate --help" for usage information.');
   }
 }
 
-// Optional encoder for custom types like DateTime (you can enhance this later)
-dynamic _safeJson(dynamic value) {
-  if (value is DateTime) return value.toIso8601String();
-  return value;
+/// Save SafeExpect JSON results to testmate-reports/report.json
+void _saveSafeExpectJson(String jsonString, String flutterProjectDir) {
+  try {
+    // Validate the JSON first
+    final jsonData = json.decode(jsonString);
+    
+    // Create the testmate-reports directory
+    final reportsDir = Directory('$flutterProjectDir/testmate-reports');
+    if (!reportsDir.existsSync()) {
+      reportsDir.createSync(recursive: true);
+    }
+    
+    // Save to testmate-reports/report.json
+    final reportFile = File('$flutterProjectDir/testmate-reports/report.json');
+    reportFile.writeAsStringSync(jsonString);
+    
+    print('✅ SafeExpect results saved to testmate-reports/report.json');
+    
+    // Also generate HTML report from the SafeExpect JSON
+    try {
+      generateHtmlReport(jsonData, '$flutterProjectDir/testmate-reports/safeexpect_report.html');
+      print('✅ SafeExpect HTML report generated: testmate-reports/safeexpect_report.html');
+    } catch (e) {
+      print('⚠️ Could not generate HTML report: $e');
+    }
+    
+  } catch (e) {
+    print('❌ Failed to save SafeExpect JSON: $e');
+    print('Raw JSON: $jsonString');
+  }
 }
