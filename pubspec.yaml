@@ -1,5 +1,5 @@
 name: testmate
-description: A sample command-line application.
+description: Testmate is a Flutter test utility package that provides a comprehensive suite of tools for testing and reporting Flutter applications.
 version: 1.0.1+1
 # repository: https://github.com/my_org/my_repo
 
