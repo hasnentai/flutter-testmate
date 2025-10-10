@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart' hide group, testWidgets;
+import 'package:flutter_test/flutter_test.dart' hide group, testWidgets, expect;
 import 'package:integration_test/integration_test.dart';
 import 'package:example/main.dart' as app;
 import 'package:flutter_testmate/testmate.dart';
@@ -8,7 +7,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Taxpayer Form Integration Tests', () {
-   testWidgets('Should enter text in PAN field',
+   testWidgets('Test 1: Should enter text in PAN field',
         (WidgetTester tester) async {
       // No need to call SafeExpect.startTest - it's automatic now!
 
@@ -20,12 +19,16 @@ void main() {
       // Wait for the app to fully load
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // Minimal change approach - just wrap your existing expects with SafeExpect.catchError()
-      final panLabel = find.text('First Name');
-      SafeExpect.catchError(() => expect(panLabel, findsOneWidget));
+      // NEW SIMPLIFIED SYNTAX - Just use expect() directly!
+      // No need for SafeExpect.catchError() wrapper anymore
+      final panLabel = find.text('First Name1');
+      expect(panLabel, findsOneWidget);
+
+      final panLabel1 = find.text('First Name2');
+      expect(panLabel1, findsOneWidget);
 
       final lastName = find.text('Middle Name');
-      SafeExpect.catchError(() => expect(lastName, findsOneWidget));
+      expect(lastName, findsOneWidget);
 
       // Record test result and fail if needed
       SafeExpect.failIfAnyFailed();
@@ -38,11 +41,11 @@ void main() {
       app.main();
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    final panLabel = find.text('First Name');
-      SafeExpect.catchError(() => expect(panLabel, findsOneWidget));
+      final panLabel = find.text('First Name');
+      expect(panLabel, findsOneWidget);
 
       final lastName = find.text('Middle Name');
-      SafeExpect.catchError(() => expect(lastName, findsOneWidget));
+      expect(lastName, findsOneWidget);
 
       // Record test result and fail if needed
       SafeExpect.failIfAnyFailed();
@@ -61,12 +64,12 @@ void main() {
       // Wait for the app to fully load
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // Minimal change approach - just wrap your existing expects with SafeExpect.catchError()
+      // Use the simplified expect() syntax
       final panLabel = find.text('First Name');
-      SafeExpect.catchError(() => expect(panLabel, findsOneWidget));
+      expect(panLabel, findsOneWidget);
 
       final lastName = find.text('Middle Name');
-      SafeExpect.catchError(() => expect(lastName, findsOneWidget));
+      expect(lastName, findsOneWidget);
 
       // Record test result and fail if needed
       SafeExpect.failIfAnyFailed();
@@ -79,10 +82,8 @@ void main() {
       app.main();
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      SafeExpect.catchError(
-          () => expect(find.text("Dashboard"), findsOneWidget));
-      SafeExpect.catchError(
-          () => expect(find.text("Dashboard"), findsOneWidget));
+      expect(find.text("Dashboard"), findsOneWidget);
+      expect(find.text("Dashboard"), findsOneWidget);
 
       // Record test result and fail if needed
       SafeExpect.failIfAnyFailed();

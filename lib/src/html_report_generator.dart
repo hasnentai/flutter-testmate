@@ -79,6 +79,23 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
       font-size: 0.875rem;
       margin-top: 0.25rem;
     }
+    /* Striped table rows for better readability */
+    tbody tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+    /* Hover effect for table rows */
+    tbody tr:hover {
+      background-color: #f3f4f6;
+    }
+    /* Make table responsive */
+    @media (max-width: 768px) {
+      table {
+        font-size: 0.875rem;
+      }
+      th, td {
+        padding: 0.5rem;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 p-6">
@@ -216,6 +233,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
       '</div>';
 
     let testIndex = 0;
+    let globalTestNumber = 0;
     Object.entries(grouped).forEach(([suite, tests]) => {
       const passed = tests.filter(t => t.status === "passed");
       const failed = tests.filter(t => t.status === "failed");
@@ -231,46 +249,67 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
       suiteTitle.innerHTML = '📦 Suite: ' + suite + ' <span class="text-sm font-normal text-gray-600">(' + totalTests + ' Test' + (totalTests !== 1 ? 's' : '') + ')</span>';
       suiteSection.appendChild(suiteTitle);
 
-      // Create a single list maintaining original test order
-      let htmlBody = '<ul class="list-disc list-inside">';
+      // Create a table instead of list
+      let htmlBody = '<div class="overflow-x-auto mt-4">' +
+        '<table class="min-w-full bg-white border border-gray-300 rounded-lg">' +
+        '<thead class="bg-gray-200">' +
+        '<tr>' +
+        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Sr No</th>' +
+        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Description</th>' +
+        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Status</th>' +
+        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Error</th>' +
+        '</tr>' +
+        '</thead>' +
+        '<tbody class="divide-y divide-gray-200">';
       
       tests.forEach((test, index) => {
-        const testNumber = index + 1;
+        globalTestNumber++;
+        const testNumber = globalTestNumber;
         
         if (test.status === 'passed') {
-          htmlBody += '<li class="text-green-800 mb-2">✅ ' + test.testName + ' <span class="text-xs text-gray-500">(' + testNumber + '/' + totalTests + ')</span></li>';
+          htmlBody += '<tr>' +
+            '<td class="px-4 py-3 text-sm font-medium text-gray-900">' + testNumber + '</td>' +
+            '<td class="px-4 py-3 text-sm text-gray-900">' + test.testName + '</td>' +
+            '<td class="px-4 py-3 text-sm"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✅ Passed</span></td>' +
+            '<td class="px-4 py-3 text-sm text-gray-500">-</td>' +
+            '</tr>';
         } else {
           // New: render each failed expect independently if present
           const failures = Array.isArray(test.expectFailed) ? test.expectFailed : [];
-          htmlBody += '<li class="text-red-800 mb-2">' +
-            '<span class="font-semibold">❌ ' + test.testName + ' <span class="text-xs text-gray-500">(' + testNumber + '/' + totalTests + ')</span></span>' +
-            '<div class="ml-4">';
+          
+          // Start the failed test row
+          htmlBody += '<tr class="bg-red-50">' +
+            '<td class="px-4 py-3 text-sm font-medium text-gray-900 align-top">' + testNumber + '</td>' +
+            '<td class="px-4 py-3 text-sm text-gray-900 align-top font-medium">' + test.testName + '</td>' +
+            '<td class="px-4 py-3 text-sm align-top"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">❌ Failed</span></td>' +
+            '<td class="px-4 py-3 text-sm align-top">' +
+            '<div class="space-y-2">';
 
           if (failures.length > 0) {
-            failures.forEach((f) => {
+            failures.forEach((f, fIndex) => {
               const preId = 'trace-' + (testIndex++);
               const fullStack = (f.stackTrace || '').toString();
-              const shortStack = fullStack.split('\\n').slice(0, 3).join('\\n');
+              const shortStack = fullStack.split('\\n').slice(0, 2).join('\\n');
               const hasLocation = !!(f.filePath && f.lineNumber);
 
-              htmlBody += '<div class="mb-3 p-2 rounded border bg-white">';
+              if (fIndex > 0) htmlBody += '<hr class="my-2 border-gray-300">';
+              
+              htmlBody += '<div class="mb-2">';
               if (f.reason) {
-                htmlBody += '<div><strong>• Reason:</strong> ' + formatReason(f.reason) + '</div>';
+                htmlBody += '<div class="text-red-700 font-medium mb-1">• ' + escapeHtml(f.reason.toString().split('\\n')[0]) + '</div>';
               }
               if (hasLocation) {
-                htmlBody += '<p class="mt-2">' +
+                htmlBody += '<div class="flex items-center gap-2 mt-1">' +
                   '<button onclick="navigateToTest(\\'' + f.filePath + '\\', ' + f.lineNumber + ')" ' +
-                  'class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">' +
-                  '🔍 Open in IDE (Line ' + f.lineNumber + ')' +
+                  'class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors">' +
+                  '🔍 Line ' + f.lineNumber +
                   '</button>' +
-                  '<span class="text-xs text-gray-500 ml-2">File: ' + f.filePath + '</span>' +
-                '</p>';
-              } else {
-                htmlBody += '<p class="text-xs text-gray-500 mt-2">⚠️ Could not determine file location</p>';
+                  '<span class="text-xs text-gray-600">' + f.filePath + '</span>' +
+                '</div>';
               }
               if (fullStack) {
-                htmlBody += '<pre id="' + preId + '" class="bg-gray-200 p-2 rounded text-sm mt-2 whitespace-pre-wrap overflow-hidden max-h-24" data-full-stack="' + fullStack.replace(/"/g, '&quot;') + '">' + shortStack + '</pre>' +
-                  '<button onclick="toggleTrace(\\'' + preId + '\\', this)" class="text-xs text-gray-500 hover:text-gray-700 mt-1 cursor-pointer">📄 Show more logs</button>';
+                htmlBody += '<details class="mt-1"><summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">📄 View stack trace</summary>' +
+                  '<pre class="bg-gray-100 p-2 rounded text-xs mt-1 whitespace-pre-wrap overflow-auto max-h-32">' + escapeHtml(fullStack) + '</pre></details>';
               }
               htmlBody += '</div>';
             });
@@ -278,62 +317,46 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
             // Fallback legacy single error rendering
             const preId = 'trace-' + (testIndex++);
             const fullStack = (test.stackTrace || '').toString();
-            const shortStack = fullStack.split('\\n').slice(0, 3).join('\\n');
             const hasLocation = !!(test.filePath && test.lineNumber);
-            htmlBody += '<div><strong>• Reason:</strong> ' + formatReason(test.reason || '') + '</div>';
+            
+            if (test.reason) {
+              htmlBody += '<div class="text-red-700 font-medium mb-1">' + escapeHtml(test.reason.toString().split('\\n')[0]) + '</div>';
+            }
             if (hasLocation) {
-              htmlBody += '<p class="mt-2">' +
+              htmlBody += '<div class="flex items-center gap-2 mt-1">' +
                 '<button onclick="navigateToTest(\\'' + test.filePath + '\\', ' + test.lineNumber + ')" ' +
-                'class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">' +
-                '🔍 Open in IDE (Line ' + test.lineNumber + ')' +
+                'class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors">' +
+                '🔍 Line ' + test.lineNumber +
                 '</button>' +
-                '<span class="text-xs text-gray-500 ml-2">File: ' + test.filePath + '</span>' +
-              '</p>';
+                '<span class="text-xs text-gray-600">' + test.filePath + '</span>' +
+              '</div>';
             }
             if (fullStack) {
-              htmlBody += '<pre id="' + preId + '" class="bg-gray-200 p-2 rounded text-sm mt-2 whitespace-pre-wrap overflow-hidden max-h-24" data-full-stack="' + fullStack.replace(/"/g, '&quot;') + '">' + shortStack + '</pre>' +
-                '<button onclick="toggleTrace(\\'' + preId + '\\', this)" class="text-xs text-gray-500 hover:text-gray-700 mt-1 cursor-pointer">📄 Show more logs</button>';
+              htmlBody += '<details class="mt-1"><summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">📄 View stack trace</summary>' +
+                '<pre class="bg-gray-100 p-2 rounded text-xs mt-1 whitespace-pre-wrap overflow-auto max-h-32">' + escapeHtml(fullStack) + '</pre></details>';
             }
           }
 
           // Screenshot if available
           if (test.screenshotPath) {
             htmlBody += 
-              '<div class="mt-4">' +
-                '<p class="text-sm font-medium text-gray-700 mb-2">📸 Screenshot at failure:</p>' +
-                '<div class="border border-gray-300 rounded-lg overflow-hidden">' +
-                  '<img src="' + test.screenshotPath + '" alt="Test failure screenshot" class="w-full max-w-md cursor-pointer hover:opacity-90 transition-opacity" onclick="openScreenshotModal(this.src)" />' +
-                '</div>' +
-                '<p class="text-xs text-gray-500 mt-1">Click to view full size</p>' +
+              '<div class="mt-2">' +
+                '<details><summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">📸 View screenshot</summary>' +
+                '<div class="border border-gray-300 rounded-lg overflow-hidden mt-2">' +
+                  '<img src="' + test.screenshotPath + '" alt="Test failure screenshot" class="w-full max-w-sm cursor-pointer hover:opacity-90 transition-opacity" onclick="openScreenshotModal(this.src)" />' +
+                '</div></details>' +
               '</div>';
           }
 
-          htmlBody += '</div></li>';
+          htmlBody += '</div></td></tr>';
         }
       });
       
-      htmlBody += '</ul>';
+      htmlBody += '</tbody></table></div>';
 
       suiteSection.insertAdjacentHTML('beforeend', htmlBody);
       reportDiv.appendChild(suiteSection);
     });
-
-    function toggleTrace(id, btn) {
-      const pre = document.getElementById(id);
-      const fullStack = pre.getAttribute('data-full-stack');
-      
-      if (pre.style.maxHeight === "none") {
-        // Collapse back to short version
-        pre.style.maxHeight = "6rem";
-        pre.textContent = fullStack.split('\\n').slice(0, 3).join('\\n');
-        btn.innerHTML = "📄 Show more logs";
-      } else {
-        // Expand to show complete stack trace
-        pre.style.maxHeight = "none";
-        pre.textContent = fullStack;
-        btn.innerHTML = "📄 Show less logs";
-      }
-    }
 
     function navigateToTest(filePath, lineNumber) {
       // Get the current HTML file's location to construct absolute path

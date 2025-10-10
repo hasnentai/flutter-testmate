@@ -2,7 +2,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart' as flutter_test;
-import 'package:flutter_test/flutter_test.dart' hide group, testWidgets;
+import 'package:flutter_test/flutter_test.dart' hide group, testWidgets, expect;
 
 /// A wrapper that allows chaining .catch() to expect statements
 class SafeExpectResult {
@@ -102,6 +102,19 @@ void testmateGroup(String description, void Function() body) {
 /// Custom testWidgets wrapper that captures test name (alias for testWidgets)
 void testmateTestWidgets(String description, flutter_test.WidgetTesterCallback callback) {
   testWidgets(description, callback);
+}
+
+/// Override the default expect function to automatically use SafeExpect.catchError
+/// This allows you to write: expect(actual, matcher) instead of SafeExpect.catchError(() => expect(actual, matcher))
+void expect(
+  dynamic actual,
+  dynamic matcher, {
+  String? reason,
+  dynamic skip, // ignore: avoid_annotating_with_dynamic
+}) {
+  SafeExpect.catchError(() {
+    flutter_test.expect(actual, matcher, reason: reason, skip: skip);
+  });
 }
 
 /// Utility functions for safe expect operations
