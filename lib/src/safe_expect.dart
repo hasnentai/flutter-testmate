@@ -1,7 +1,8 @@
 // lib/src/safe_expect.dart
 import 'dart:convert';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart' as flutter_test;
+import 'package:flutter_test/flutter_test.dart' hide group, testWidgets;
 
 /// A wrapper that allows chaining .catch() to expect statements
 class SafeExpectResult {
@@ -62,6 +63,47 @@ class TestFailureInfo {
   };
 }
 
+/// Stack to store group names (for nested groups)
+List<String> _groupStack = [];
+
+/// Override the default group function to capture group names
+void group(String description, void Function() body) {
+  _groupStack.add(description);
+  flutter_test.group(description, () {
+    body();
+  });
+  // Remove after the group registration is complete
+  _groupStack.removeLast();
+  
+}
+
+/// Override the default testWidgets function to capture test names
+void testWidgets(String description, flutter_test.WidgetTesterCallback callback, {bool? skip, flutter_test.Timeout? timeout, bool semanticsEnabled = true, flutter_test.TestVariant<Object?> variant = const flutter_test.DefaultTestVariant(), dynamic tags}) {
+
+  // Capture the group name at registration time
+  final capturedGroupName = _groupStack.isNotEmpty ? _groupStack.last : 'Default Suite';
+  flutter_test.testWidgets(description, (flutter_test.WidgetTester tester) async {
+    // Store both test name and group name in SafeExpect class
+    SafeExpect._setCurrentTest(description);
+    // Use the captured group name instead of trying to get it from context
+    SafeExpect._setCurrentGroup(capturedGroupName);
+    print('🔍 Debug - Test executing with group: $capturedGroupName');
+    // Automatically start tracking - no need to call startTestFromContext manually
+    SafeExpect.startTestFromContext();
+    await callback(tester);
+  }, skip: skip, timeout: timeout, semanticsEnabled: semanticsEnabled, variant: variant, tags: tags);
+}
+
+/// Custom group wrapper that captures group name (alias for group)
+void testmateGroup(String description, void Function() body) {
+  group(description, body);
+}
+
+/// Custom testWidgets wrapper that captures test name (alias for testWidgets)
+void testmateTestWidgets(String description, flutter_test.WidgetTesterCallback callback) {
+  testWidgets(description, callback);
+}
+
 /// Utility functions for safe expect operations
 class SafeExpect {
   static final List<Map<String, dynamic>> _failedExpects = [];
@@ -74,6 +116,22 @@ class SafeExpect {
   static void startTest(String testName, {String? testSuite}) {
     _currentTestName = testName;
     _currentTestSuite = testSuite ?? 'Default Suite';
+    _failedExpects.clear();
+  }
+
+  /// Set current group name (called by testmateGroup)
+  static void _setCurrentGroup(String groupName) {
+    _currentTestSuite = groupName;
+  }
+
+  /// Set current test name (called by testmateTestWidgets)
+  static void _setCurrentTest(String testName) {
+    _currentTestName = testName;
+  }
+
+  /// Automatically start tracking using current test context
+  /// This extracts test name and group from the captured context
+  static void startTestFromContext() {
     _failedExpects.clear();
   }
   

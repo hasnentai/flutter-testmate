@@ -5,8 +5,7 @@ import 'package:args/args.dart';
 
 import 'html_report_generator.dart';
 
-void run(List<String> arguments) async {
-  print("Helllooooooooooooooo");
+Future<void> run(List<String> arguments) async {
   final parser = ArgParser()
     ..addCommand('test')
     ..addFlag('web', abbr: 'w', negatable: false, help: 'Run on Flutter Web');
@@ -29,10 +28,6 @@ void run(List<String> arguments) async {
 
 
   if (results.command?.name == 'test') {
-    final runCommand =
-        'flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d chrome';
-
-   
     final process = await Process.start(
       'flutter',
       [
@@ -93,6 +88,9 @@ void run(List<String> arguments) async {
     } else {
       print('✅ Test completed successfully.');
     }
+    
+    // Kill any remaining Chrome processes to ensure browser closes
+    await _killChromeProcesses();
   } else {
     print('❌ Invalid command.\n');
     print('Use "testmate --help" for usage information.');
@@ -128,5 +126,43 @@ void _saveSafeExpectJson(String jsonString, String flutterProjectDir) {
   } catch (e) {
     print('❌ Failed to save SafeExpect JSON: $e');
     print('Raw JSON: $jsonString');
+  }
+}
+
+/// Kill any remaining Chrome processes to ensure browser closes
+Future<void> _killChromeProcesses() async {
+  try {
+    print('🧹 Cleaning up Chrome processes...');
+    
+    // Detect the platform and use appropriate command
+    if (Platform.isWindows) {
+      // Windows: Use taskkill to kill Chrome processes with --remote-debugging-port
+      // This targets only Chrome instances launched by Flutter
+      final result = await Process.run(
+        'wmic',
+        ['process', 'where', '"name=\'chrome.exe\' and CommandLine like \'%remote-debugging-port%\'"', 'delete'],
+        runInShell: true,
+      );
+      // If the above fails, fall back to killing all chrome.exe
+      if (result.exitCode != 0) {
+        await Process.run('taskkill', ['/F', '/IM', 'chrome.exe'], runInShell: true);
+      }
+    } else {
+      // macOS/Linux: Kill Chrome processes with --remote-debugging-port (Flutter's test Chrome)
+      // This is safer as it only kills Chrome instances launched by Flutter testing
+      final result = await Process.run('pkill', ['-f', 'chrome.*remote-debugging-port'], runInShell: true);
+      
+      // If no specific Chrome instance found, try the general chrome process
+      if (result.exitCode != 0) {
+        await Process.run('pkill', ['-f', 'Chromium.*remote-debugging-port'], runInShell: true);
+      }
+    }
+    
+    // Give it a moment to clean up
+    await Future.delayed(Duration(milliseconds: 500));
+    print('✅ Chrome processes cleaned up');
+  } catch (e) {
+    // It's okay if this fails - Chrome might have already closed
+    print('ℹ️ Chrome cleanup completed (some processes may have already been closed)');
   }
 }
