@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # TestMate package for enhanced testing utilities
-  testmate:
+  flutter_testmate:
     path: ../
 
 dev_dependencies:
