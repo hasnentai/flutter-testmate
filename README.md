@@ -187,7 +187,7 @@ The HTML report provides a beautiful, interactive interface showing:
 
 The HTML report features a modern, clean design with comprehensive test analytics:
 
-![Flutter TestMate Report](https://via.placeholder.com/800x600/4a90e2/ffffff?text=Flutter+TestMate+Report)
+![Flutter TestMate Report](https://github.com/hasnentai/flutter-testmate/blob/main/example/assets/report.png)
 
 **Key Features:**
 - **📊 Test Summary Dashboard**: Shows pass rate (75.0%), total tests (4), passed (3), failed (1)
