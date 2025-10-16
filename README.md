@@ -15,12 +15,28 @@ A powerful Flutter integration testing tool that provides enhanced test reportin
 
 ### Installation
 
-Add Flutter TestMate to your `pubspec.yaml`:
+Flutter TestMate is a CLI tool that can be installed from pub.dev:
+
+1. **Install globally** from pub.dev:
+
+```bash
+# Install the CLI tool globally
+dart pub global activate flutter_testmate
+```
+
+**Note**: Make sure your pub global bin directory is in your PATH. If you get a "command not found" error, add this to your shell profile:
+
+```bash
+# Add to ~/.bashrc, ~/.zshrc, or ~/.profile
+export PATH="$PATH":"$HOME/.pub-cache/bin"
+```
+
+2. **Add to your project** (for development):
 
 ```yaml
+# pubspec.yaml
 dev_dependencies:
-  flutter_testmate:
-    path: ../flutter-testmate  # Adjust path as needed
+  flutter_testmate: ^1.0.0  # Use the latest version
 ```
 
 ### Basic Usage
@@ -97,13 +113,16 @@ void main() {
 
 ```bash
 # Run all tests
-dart run flutter_testmate.dart test
-
-# Run only smoke tests
-dart run flutter_testmate.dart test --tag @smoke
+flutter_testmate test
 
 # Run tests on web
-dart run flutter_testmate.dart test --web
+flutter_testmate test --web
+
+# Run only smoke tests
+flutter_testmate test --tag @smoke
+
+# Run smoke tests on web
+flutter_testmate test --web --tag @smoke
 ```
 
 ## 🏷️ Tag-based Test Filtering
@@ -128,13 +147,16 @@ testWidgets('Regression test for payment flow',
 
 ```bash
 # Run smoke tests
-dart run flutter_testmate.dart test --tag @smoke
+flutter_testmate test --tag @smoke
 
 # Run regression tests
-dart run flutter_testmate.dart test --tag @regression
+flutter_testmate test --tag @regression
 
 # Run critical tests
-dart run flutter_testmate.dart test --tag @critical
+flutter_testmate test --tag @critical
+
+# Run smoke tests on web
+flutter_testmate test --web --tag @smoke
 ```
 
 ### How Tag Filtering Works
@@ -163,34 +185,26 @@ The HTML report provides a beautiful, interactive interface showing:
 
 #### Report Screenshot
 
-The HTML report features a modern, clean design with:
+The HTML report features a modern, clean design with comprehensive test analytics:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  📊 Flutter Integration Test Report                        │
-├─────────────────────────────────────────────────────────────┤
-│  Summary: 4 tests | ✅ 3 passed | ❌ 1 failed             │
-├─────────────────────────────────────────────────────────────┤
-│  Test Suites:                                              │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ Taxpayer Form Integration Tests                         │ │
-│  │ ├─ ✅ Test 1: Should enter text in PAN field          │ │
-│  │ └─ ❌ Should have form elements                        │ │
-│  │    └─ Error: Expected "First Name1" but found none     │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ Another Group                                          │ │
-│  │ ├─ ✅ Test Case One                                   │ │
-│  │ └─ ✅ Test Case Two                                   │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
+![Flutter TestMate Report](https://via.placeholder.com/800x600/4a90e2/ffffff?text=Flutter+TestMate+Report)
 
-Key features:
-- **Color-coded status**: Green for passed, red for failed
+**Key Features:**
+- **📊 Test Summary Dashboard**: Shows pass rate (75.0%), total tests (4), passed (3), failed (1)
+- **📈 Visual Progress Bar**: Green progress bar indicating test completion status
+- **🎯 Test Suite Organization**: Tests grouped by meaningful suite names
+- **❌ Detailed Error Analysis**: 
+  - Clickable error messages with line numbers
+  - Stack trace viewing capability
+  - File path references for easy debugging
+- **✅ Status Indicators**: Color-coded pills (green for passed, red for failed)
+- **📱 Responsive Design**: Clean, modern interface that works on all devices
+- **🕒 Timestamp Information**: Shows when the report was generated
+
+**Interactive Elements:**
 - **Expandable error details**: Click to view full stack traces
-- **Responsive layout**: Adapts to different screen sizes
-- **Professional styling**: Clean, modern interface
+- **File navigation**: Direct links to error locations in your code
+- **Collapsible test suites**: Organize large test suites efficiently
 
 ### JSON Report
 
@@ -227,12 +241,31 @@ Machine-readable test results for CI/CD integration:
 ### CLI Options
 
 ```bash
-dart run flutter_testmate.dart test [options]
+flutter_testmate test [options]
 
 Options:
   -w, --web          Run on Flutter Web
   -t, --tag <tag>    Run only tests with specific tag (e.g., @smoke)
   -h, --help         Show help information
+```
+
+### Usage Examples
+
+```bash
+# Basic usage
+flutter_testmate test
+
+# Run on web
+flutter_testmate test --web
+
+# Run specific tagged tests
+flutter_testmate test --tag @smoke
+
+# Run tagged tests on web
+flutter_testmate test --web --tag @regression
+
+# Get help
+flutter_testmate --help
 ```
 
 ### Test File Structure
@@ -308,8 +341,23 @@ The included example project demonstrates:
 ### Running the Example
 
 ```bash
-cd example
-dart run ../bin/flutter_testmate.dart test
+# First, install the package
+dart pub global activate flutter_testmate
+
+# Navigate to your project directory
+cd your-flutter-project
+
+# Run all tests
+flutter_testmate test
+
+# Run tests on web
+flutter_testmate test --web
+
+# Run only smoke tests
+flutter_testmate test --tag @smoke
+
+# Run smoke tests on web
+flutter_testmate test --web --tag @smoke
 ```
 
 ## 🤝 Contributing
