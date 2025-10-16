@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart' hide group, testWidgets, expect;
 import 'package:integration_test/integration_test.dart';
 import 'package:example/main.dart' as app;
-import 'package:flutter_testmate/testmate.dart';
+import 'package:flutter_testmate/flutter_testmate.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
