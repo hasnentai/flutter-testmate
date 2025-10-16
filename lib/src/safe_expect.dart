@@ -71,10 +71,9 @@ void group(String description, void Function() body) {
   _groupStack.add(description);
   flutter_test.group(description, () {
     body();
+    // Remove after the group execution is complete
+    _groupStack.removeLast();
   });
-  // Remove after the group registration is complete
-  _groupStack.removeLast();
-  
 }
 
 /// Override the default testWidgets function to capture test names
