@@ -87,7 +87,7 @@ void main() {
 
       // Record test result and fail if needed
       SafeExpect.failIfAnyFailed();
-    });
+    },tags: ['@smoke']);
   });
 
   // Print and save all test results as JSON at the end
