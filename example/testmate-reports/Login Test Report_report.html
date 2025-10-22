@@ -1,67 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
-void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
-  // Normalize input: accept either a flat List of test results or the
-  // SafeExpect summary Map with testSuites/testWidgets.
-  List<dynamic> results;
-  if (resultsOrMap is List) {
-    results = resultsOrMap;
-  } else if (resultsOrMap is Map<String, dynamic>) {
-    final List<dynamic> suites =
-        (resultsOrMap['testSuites'] as List?) ?? const <dynamic>[];
-    final List<Map<String, dynamic>> flattened = <Map<String, dynamic>>[];
-
-    for (final dynamic suiteEntry in suites) {
-      if (suiteEntry is Map<String, dynamic>) {
-        final String suiteName = (suiteEntry['testSuite'] as String?) ?? 'Default Suite';
-        final List<dynamic> tests =
-            (suiteEntry['testWidgets'] as List?) ?? const <dynamic>[];
-
-        for (final dynamic testEntry in tests) {
-          if (testEntry is Map<String, dynamic>) {
-            final String statusRaw = (testEntry['status'] as String?) ?? 'passed';
-            final String status = statusRaw.toLowerCase();
-            final dynamic expectFailed = testEntry['expectFailed'];
-            // Summary reason (first failure if array of objects)
-            String? reason;
-            if (expectFailed is List && expectFailed.isNotEmpty) {
-              final first = expectFailed.first;
-              if (first is Map && first['reason'] != null) {
-                reason = first['reason'].toString();
-              } else {
-                reason = expectFailed.join('\n');
-              }
-            } else if (expectFailed is String) {
-              reason = expectFailed;
-            } else {
-              reason = (testEntry['reason'] as String?) ?? '';
-            }
-
-            flattened.add(<String, dynamic>{
-              'testName': testEntry['testName'],
-              'suite': suiteName,
-              'status': status,
-              'reason': reason,
-              // Preserve per-expect failures array for rich rendering
-              'expectFailed': (expectFailed is List) ? expectFailed : <dynamic>[],
-              'stackTrace': testEntry['stackTrace'] ?? '',
-              'filePath': testEntry['filePath'],
-              'lineNumber': testEntry['lineNumber'],
-              'screenshotPath': testEntry['screenshotPath'],
-              'duration': testEntry['duration'],
-            });
-          }
-        }
-      }
-    }
-    results = flattened;
-    print("Results: $results");
-  } else {
-    // Fallback: unknown shape; render empty
-    results = const <dynamic>[];
-  }
-  final html = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -327,16 +263,16 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
     function formatReason(reason) {
       if (!reason) return '';
       const text = reason.toString();
-      const lines = text.split('\\n');
+      const lines = text.split('\n');
       const expectedLine = lines.find(l => l.trim().startsWith('Expected:')) || '';
       const actualLine   = lines.find(l => l.trim().startsWith('  Actual:')) || '';
       const whichLine    = lines.find(l => l.trim().startsWith('   Which:')) || '';
 
       // If we detect Expected/Actual/Which, render structured view
       if (expectedLine || actualLine || whichLine) {
-        const expected = escapeHtml(expectedLine.replace(/^\s*Expected:\s*/, ''));
-        const actual = escapeHtml(actualLine.replace(/^\s*Actual:\s*/, ''));
-        const which = escapeHtml(whichLine.replace(/^\s*Which:\s*/, ''));
+        const expected = escapeHtml(expectedLine.replace(/^s*Expected:s*/, ''));
+        const actual = escapeHtml(actualLine.replace(/^s*Actual:s*/, ''));
+        const which = escapeHtml(whichLine.replace(/^s*Which:s*/, ''));
 
         let html = '<div class="mt-1 text-sm space-y-1">';
         if (expected) {
@@ -349,7 +285,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
           html += '<div><span class="font-medium">Why:</span> ' + which + '</div>';
         }
         // Show the rest (if any) in a compact pre block
-        const rest = lines.filter(l => !l.trim().startsWith('Expected:') && !l.trim().startsWith('Actual:') && !l.trim().startsWith('Which:')).join('\\n').trim();
+        const rest = lines.filter(l => !l.trim().startsWith('Expected:') && !l.trim().startsWith('Actual:') && !l.trim().startsWith('Which:')).join('\n').trim();
         if (rest) {
           html += '<pre class="bg-gray-100 rounded p-2 whitespace-pre-wrap text-xs">' + escapeHtml(rest) + '</pre>';
         }
@@ -362,7 +298,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
     }
     
     // Initialize dashboard
-    testData = ${jsonEncode({'results': results})};
+    testData = {"results":[{"testName":"Anoother Group Test Case Two","suite":"login Tests","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null,"duration":4589}]};
     
     // Group tests by suite
     const grouped = {};
@@ -472,7 +408,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
                   '<path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"></path>' +
                 '</svg>' +
               '</div>' +
-            '</div>' +
+            </div>' +
           '</div>' +
         '</div>' +
         '<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">' +
@@ -549,7 +485,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
           if (test.expectFailed && Array.isArray(test.expectFailed) && test.expectFailed.length > 0) {
             errorSummary = test.expectFailed.length + ' expectation' + (test.expectFailed.length !== 1 ? 's' : '') + ' failed';
           } else if (test.reason) {
-            const firstLine = test.reason.split('\\n')[0];
+            const firstLine = test.reason.split('\n')[0];
             errorSummary = firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
           } else {
             errorSummary = 'Test failed';
@@ -885,11 +821,3 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
   </script>
 </body>
 </html>
-''';
-
-  final htmlFile = File(outputPath);
-  htmlFile.createSync(recursive: true);
-  htmlFile.writeAsStringSync(html);
-  print('✅ HTML report saved to: $outputPath');
-}
-

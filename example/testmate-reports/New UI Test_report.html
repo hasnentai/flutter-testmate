@@ -1,67 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
-void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
-  // Normalize input: accept either a flat List of test results or the
-  // SafeExpect summary Map with testSuites/testWidgets.
-  List<dynamic> results;
-  if (resultsOrMap is List) {
-    results = resultsOrMap;
-  } else if (resultsOrMap is Map<String, dynamic>) {
-    final List<dynamic> suites =
-        (resultsOrMap['testSuites'] as List?) ?? const <dynamic>[];
-    final List<Map<String, dynamic>> flattened = <Map<String, dynamic>>[];
-
-    for (final dynamic suiteEntry in suites) {
-      if (suiteEntry is Map<String, dynamic>) {
-        final String suiteName = (suiteEntry['testSuite'] as String?) ?? 'Default Suite';
-        final List<dynamic> tests =
-            (suiteEntry['testWidgets'] as List?) ?? const <dynamic>[];
-
-        for (final dynamic testEntry in tests) {
-          if (testEntry is Map<String, dynamic>) {
-            final String statusRaw = (testEntry['status'] as String?) ?? 'passed';
-            final String status = statusRaw.toLowerCase();
-            final dynamic expectFailed = testEntry['expectFailed'];
-            // Summary reason (first failure if array of objects)
-            String? reason;
-            if (expectFailed is List && expectFailed.isNotEmpty) {
-              final first = expectFailed.first;
-              if (first is Map && first['reason'] != null) {
-                reason = first['reason'].toString();
-              } else {
-                reason = expectFailed.join('\n');
-              }
-            } else if (expectFailed is String) {
-              reason = expectFailed;
-            } else {
-              reason = (testEntry['reason'] as String?) ?? '';
-            }
-
-            flattened.add(<String, dynamic>{
-              'testName': testEntry['testName'],
-              'suite': suiteName,
-              'status': status,
-              'reason': reason,
-              // Preserve per-expect failures array for rich rendering
-              'expectFailed': (expectFailed is List) ? expectFailed : <dynamic>[],
-              'stackTrace': testEntry['stackTrace'] ?? '',
-              'filePath': testEntry['filePath'],
-              'lineNumber': testEntry['lineNumber'],
-              'screenshotPath': testEntry['screenshotPath'],
-              'duration': testEntry['duration'],
-            });
-          }
-        }
-      }
-    }
-    results = flattened;
-    print("Results: $results");
-  } else {
-    // Fallback: unknown shape; render empty
-    results = const <dynamic>[];
-  }
-  final html = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -327,16 +263,16 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
     function formatReason(reason) {
       if (!reason) return '';
       const text = reason.toString();
-      const lines = text.split('\\n');
+      const lines = text.split('\n');
       const expectedLine = lines.find(l => l.trim().startsWith('Expected:')) || '';
       const actualLine   = lines.find(l => l.trim().startsWith('  Actual:')) || '';
       const whichLine    = lines.find(l => l.trim().startsWith('   Which:')) || '';
 
       // If we detect Expected/Actual/Which, render structured view
       if (expectedLine || actualLine || whichLine) {
-        const expected = escapeHtml(expectedLine.replace(/^\s*Expected:\s*/, ''));
-        const actual = escapeHtml(actualLine.replace(/^\s*Actual:\s*/, ''));
-        const which = escapeHtml(whichLine.replace(/^\s*Which:\s*/, ''));
+        const expected = escapeHtml(expectedLine.replace(/^s*Expected:s*/, ''));
+        const actual = escapeHtml(actualLine.replace(/^s*Actual:s*/, ''));
+        const which = escapeHtml(whichLine.replace(/^s*Which:s*/, ''));
 
         let html = '<div class="mt-1 text-sm space-y-1">';
         if (expected) {
@@ -349,7 +285,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
           html += '<div><span class="font-medium">Why:</span> ' + which + '</div>';
         }
         // Show the rest (if any) in a compact pre block
-        const rest = lines.filter(l => !l.trim().startsWith('Expected:') && !l.trim().startsWith('Actual:') && !l.trim().startsWith('Which:')).join('\\n').trim();
+        const rest = lines.filter(l => !l.trim().startsWith('Expected:') && !l.trim().startsWith('Actual:') && !l.trim().startsWith('Which:')).join('\n').trim();
         if (rest) {
           html += '<pre class="bg-gray-100 rounded p-2 whitespace-pre-wrap text-xs">' + escapeHtml(rest) + '</pre>';
         }
@@ -362,7 +298,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
     }
     
     // Initialize dashboard
-    testData = ${jsonEncode({'results': results})};
+    testData = {"results":[{"testName":"Anoother Group Test Case Two","suite":"smoke Tests","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null,"duration":4443},{"testName":"Anoother Group Test Case Two","suite":"smoke Tests","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null,"duration":4191}]};
     
     // Group tests by suite
     const grouped = {};
@@ -427,7 +363,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
               '</div>' +
               '<div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">' +
                 '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
-                  '<path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"></path>' +
+                  '<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>' +
                 '</svg>' +
               '</div>' +
             '</div>' +
@@ -441,7 +377,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
               '</div>' +
               '<div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">' +
                 '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
-                  '<path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path>' +
+                  '<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>' +
                 '</svg>' +
               '</div>' +
             '</div>' +
@@ -455,10 +391,10 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
               '</div>' +
               '<div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">' +
                 '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
-                  '<path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>' +
+                  '<path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>' +
                 '</svg>' +
               '</div>' +
-            '</div>' +
+            </div>' +
           '</div>' +
           '<div class="bg-purple-50 border border-purple-200 rounded-lg p-6 flex-1 min-w-64 shadow-sm">' +
             '<div class="flex items-center justify-between">' +
@@ -469,10 +405,10 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
               '</div>' +
               '<div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">' +
                 '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
-                  '<path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"></path>' +
+                  '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>' +
                 '</svg>' +
               '</div>' +
-            '</div>' +
+            </div>' +
           '</div>' +
         '</div>' +
         '<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">' +
@@ -549,7 +485,7 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
           if (test.expectFailed && Array.isArray(test.expectFailed) && test.expectFailed.length > 0) {
             errorSummary = test.expectFailed.length + ' expectation' + (test.expectFailed.length !== 1 ? 's' : '') + ' failed';
           } else if (test.reason) {
-            const firstLine = test.reason.split('\\n')[0];
+            const firstLine = test.reason.split('\n')[0];
             errorSummary = firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
           } else {
             errorSummary = 'Test failed';
@@ -885,11 +821,3 @@ void generateHtmlReport(dynamic resultsOrMap, String outputPath) {
   </script>
 </body>
 </html>
-''';
-
-  final htmlFile = File(outputPath);
-  htmlFile.createSync(recursive: true);
-  htmlFile.writeAsStringSync(html);
-  print('✅ HTML report saved to: $outputPath');
-}
-

@@ -9,12 +9,65 @@
     .stack-trace-collapsed {
       max-height: 3.6em; /* approx. 2 lines */
       overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .toggle-btn {
+    .stack-trace-expanded {
+      max-height: none;
+      white-space: pre-wrap;
+    }
+    .screenshot-thumbnail {
+      width: 100px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
       cursor: pointer;
-      color: #2563eb; /* Tailwind blue-600 */
-      font-size: 0.875rem;
-      margin-top: 0.25rem;
+      transition: transform 0.2s;
+    }
+    .screenshot-thumbnail:hover {
+      transform: scale(1.05);
+    }
+    .sidebar {
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar-hidden {
+      transform: translateX(-100%);
+    }
+    .content-shifted {
+      margin-left: 0;
+    }
+    .nav-item {
+      transition: all 0.2s ease;
+    }
+    .nav-item:hover {
+      background-color: #f3f4f6;
+    }
+    .nav-item.active {
+      background-color: #3b82f6;
+      color: white;
+    }
+    .section {
+      display: none;
+    }
+    .section.active {
+      display: block;
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-passed {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .status-failed {
+      background-color: #fef2f2;
+      color: #dc2626;
     }
     /* Striped table rows for better readability */
     tbody tr:nth-child(even) {
@@ -35,15 +88,152 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800 p-6">
-  <div class="max-w-5xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">📊 Flutter Integration Test Report</h1>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Mobile menu button -->
+  <div class="lg:hidden fixed top-4 left-4 z-50">
+    <button id="mobile-menu-btn" class="bg-white p-2 rounded-md shadow-md">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+  </div>
 
-    <div id="summary" class="mb-6 text-lg"></div>
-    <div id="report"></div>
+  <!-- Sidebar -->
+  <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg sidebar lg:translate-x-0">
+    <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+      <h1 class="text-xl font-bold text-gray-900">📊 Test Report</h1>
+    </div>
+    
+    <nav class="mt-6">
+      <div class="px-3 space-y-1">
+        <a href="#" class="nav-item active flex items-center px-3 py-2 text-sm font-medium rounded-md" data-section="overview">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+          Overview
+        </a>
+        <a href="#" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md" data-section="tests">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          All Tests
+        </a>
+        <a href="#" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md" data-section="failed">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          Failed Tests
+        </a>
+        <a href="#" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md" data-section="suites-detail">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          Suite Details
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Main content -->
+  <div id="main-content" class="lg:ml-64 min-h-screen">
+    <div class="p-6">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Flutter Integration Test Report</h1>
+        <p class="text-gray-600" id="report-timestamp">Generated on: Loading...</p>
+      </div>
+
+      <!-- Overview Section -->
+      <div id="overview-section" class="section active">
+        <div id="summary"></div>
+      </div>
+
+
+      <!-- All Tests Section -->
+      <div id="tests-section" class="section">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">All Tests</h2>
+          </div>
+          <div class="p-6">
+            <div id="tests-table" class="table-container">
+              <!-- Tests table will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Failed Tests Section -->
+      <div id="failed-section" class="section">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Failed Tests</h2>
+          </div>
+          <div class="p-6">
+            <div id="failed-table" class="table-container">
+              <!-- Failed tests table will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suite Details Section -->
+      <div id="suites-detail-section" class="section">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Test Suite Summary</h2>
+            <p class="text-sm text-gray-600 mt-1">Overview of all test suites with detailed breakdown</p>
+          </div>
+          <div class="p-6">
+            <div id="suites-summary-table" class="table-container">
+              <!-- Suite summary table will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Test Suite Details</h2>
+            <p class="text-sm text-gray-600 mt-1">Expandable sections showing all tests within each suite</p>
+          </div>
+          <div class="p-6">
+            <div id="suites-detail-content">
+              <!-- Expandable suite sections will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
+    // Dashboard functionality
+    let testData = null;
+    
+    // Mobile menu toggle
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('sidebar-hidden');
+    });
+    
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Remove active class from all nav items
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        // Add active class to clicked item
+        this.classList.add('active');
+        
+        // Hide all sections
+        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+        // Show selected section
+        const targetSection = this.getAttribute('data-section');
+        document.getElementById(targetSection + '-section').classList.add('active');
+      });
+    });
+    
     // Screenshot modal functionality
     function openScreenshotModal(imageSrc) {
       const modal = document.createElement('div');
@@ -107,256 +297,526 @@
       return '<pre class="bg-gray-100 rounded p-2 whitespace-pre-wrap text-sm">' + escapeHtml(text) + '</pre>';
     }
     
-    const data = {"results":[{"testName":"Test 1: Should enter text in PAN field","suite":"Taxpayer Form Integration Tests","status":"failed","reason":"Expected: exactly one matching candidate\n  Actual: _TextWidgetFinder:<Found 0 widgets with text \"First Name1\": []>\n   Which: means none were found but one was expected\n","expectFailed":[{"reason":"Expected: exactly one matching candidate\n  Actual: _TextWidgetFinder:<Found 0 widgets with text \"First Name1\": []>\n   Which: means none were found but one was expected\n","stackTrace":"dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/errors.dart 266:3       throw_\npackage:matcher/src/expect/expect.dart 149:31                                     fail\npackage:matcher/src/expect/expect.dart 144:3                                      _expect\npackage:matcher/src/expect/expect.dart 56:3                                       expect$\npackage:flutter_test/src/widget_tester.dart 474:18                                expect$\npackage:flutter_testmate/src/safe_expect.dart 115:18                              <fn>\npackage:flutter_testmate/src/safe_expect.dart 154:7                               catchError\npackage:flutter_testmate/src/safe_expect.dart 114:14                              expect$\napp.test.dart 25:7                                                                <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 622:19               <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 647:23               <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 593:31               <fn>\ndart-sdk/lib/async/zone.dart 1538:47                                              _rootRunUnary\ndart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 117:77  tear\ndart-sdk/lib/async/zone.dart 1429:19                                              runUnary\ndart-sdk/lib/async/future_impl.dart 224:18                                        handleValue\ndart-sdk/lib/async/future_impl.dart 951:44                                        handleValueCallback\ndart-sdk/lib/async/future_impl.dart 980:13                                        _propagateToListeners\ndart-sdk/lib/async/future_impl.dart 723:5                                         [_completeWithValue]\ndart-sdk/lib/async/future_impl.dart 807:7                                         <fn>\ndart-sdk/lib/async/zone.dart 1525:13                                              _rootRun\ndart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 117:77  tear\ndart-sdk/lib/async/zone.dart 1422:19                                              run\ndart-sdk/lib/async/zone.dart 1321:7                                               runGuarded\ndart-sdk/lib/async/zone.dart 1362:23                                              callback\ndart-sdk/lib/async/schedule_microtask.dart 40:11                                  _microtaskLoop\ndart-sdk/lib/async/schedule_microtask.dart 49:5                                   _startMicrotaskLoop\ndart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 117:77  tear\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 186:7                <fn>\n","filePath":"integration_test/test.dart","lineNumber":25},{"reason":"Expected: exactly one matching candidate\n  Actual: _TextWidgetFinder:<Found 0 widgets with text \"First Name2\": []>\n   Which: means none were found but one was expected\n","stackTrace":"dart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/errors.dart 266:3       throw_\npackage:matcher/src/expect/expect.dart 149:31                                     fail\npackage:matcher/src/expect/expect.dart 144:3                                      _expect\npackage:matcher/src/expect/expect.dart 56:3                                       expect$\npackage:flutter_test/src/widget_tester.dart 474:18                                expect$\npackage:flutter_testmate/src/safe_expect.dart 115:18                              <fn>\npackage:flutter_testmate/src/safe_expect.dart 154:7                               catchError\npackage:flutter_testmate/src/safe_expect.dart 114:14                              expect$\napp.test.dart 28:7                                                                <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 622:19               <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 647:23               <fn>\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 593:31               <fn>\ndart-sdk/lib/async/zone.dart 1538:47                                              _rootRunUnary\ndart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 117:77  tear\ndart-sdk/lib/async/zone.dart 1429:19                                              runUnary\ndart-sdk/lib/async/future_impl.dart 224:18                                        handleValue\ndart-sdk/lib/async/future_impl.dart 951:44                                        handleValueCallback\ndart-sdk/lib/async/future_impl.dart 980:13                                        _propagateToListeners\ndart-sdk/lib/async/future_impl.dart 723:5                                         [_completeWithValue]\ndart-sdk/lib/async/future_impl.dart 807:7                                         <fn>\ndart-sdk/lib/async/zone.dart 1525:13                                              _rootRun\ndart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 117:77  tear\ndart-sdk/lib/async/zone.dart 1422:19                                              run\ndart-sdk/lib/async/zone.dart 1321:7                                               runGuarded\ndart-sdk/lib/async/zone.dart 1362:23                                              callback\ndart-sdk/lib/async/schedule_microtask.dart 40:11                                  _microtaskLoop\ndart-sdk/lib/async/schedule_microtask.dart 49:5                                   _startMicrotaskLoop\ndart-sdk/lib/_internal/js_dev_runtime/private/ddc_runtime/operations.dart 117:77  tear\ndart-sdk/lib/_internal/js_dev_runtime/patch/async_patch.dart 186:7                <fn>\n","filePath":"integration_test/test.dart","lineNumber":28}],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null},{"testName":"Should have form elements","suite":"Taxpayer Form Integration Tests","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null},{"testName":"Anoother Group Test Case One","suite":"Anoother Group","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null},{"testName":"Anoother Group Test Case Two","suite":"Anoother Group","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null}]};
-
+    // Initialize dashboard
+    testData = {"results":[{"testName":"Anoother Group Test Case Two","suite":"login Tests","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null,"duration":38959},{"testName":"Anoother Group Test Case Two","suite":"login Tests","status":"passed","reason":"","expectFailed":[],"stackTrace":"","filePath":null,"lineNumber":null,"screenshotPath":null,"duration":4203}]};
+    
+    // Group tests by suite
     const grouped = {};
-    data.results.forEach(test => {
+    testData.results.forEach(test => {
       const suite = test.suite || "Default Suite";
       if (!grouped[suite]) grouped[suite] = [];
       grouped[suite].push(test);
     });
 
-    const reportDiv = document.getElementById("report");
-    const summaryDiv = document.getElementById("summary");
-
-    const total = data.results.length;
-    const passed = data.results.filter(t => t.status === "passed").length;
-    const failed = data.results.filter(t => t.status === "failed").length;
+    const total = testData.results.length;
+    const passed = testData.results.filter(t => t.status === "passed").length;
+    const failed = testData.results.filter(t => t.status === "failed").length;
     const passPercent = ((passed / total) * 100).toFixed(1);
-
-    summaryDiv.innerHTML = 
-      '<div class="sticky top-0 bg-white border-b border-gray-200 shadow-sm mb-8">' +
-        '<div class="max-w-7xl mx-auto px-4 py-6">' +
-          '<div class="flex items-center justify-between mb-6">' +
-            '<div>' +
-              '<h2 class="text-2xl font-bold text-gray-900">Test Results Summary</h2>' +
-              '<p class="text-gray-600 mt-1">Generated on ' + new Date().toLocaleString() + '</p>' +
-            '</div>' +
-            '<div class="text-right">' +
-              '<div class="text-3xl font-bold text-gray-900">' + passPercent + '%</div>' +
-              '<div class="text-sm text-gray-600">Pass Rate</div>' +
-            '</div>' +
-          '</div>' +
-          
-          '<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">' +
-            '<div class="bg-white border border-gray-200 rounded-lg p-4 text-center">' +
-              '<div class="text-3xl font-bold text-gray-900">' + total + '</div>' +
-              '<div class="text-sm text-gray-600">Total Tests</div>' +
-            '</div>' +
-            '<div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">' +
-              '<div class="text-3xl font-bold text-green-600">' + passed + '</div>' +
-              '<div class="text-sm text-green-700">✅ Passed</div>' +
-            '</div>' +
-            '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">' +
-              '<div class="text-3xl font-bold text-red-600">' + failed + '</div>' +
-              '<div class="text-sm text-red-700">❌ Failed</div>' +
-            '</div>' +
-            '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">' +
-              '<div class="text-3xl font-bold text-blue-600">' + Object.keys(grouped).length + '</div>' +
-              '<div class="text-sm text-blue-700">📦 Test Suites</div>' +
-            '</div>' +
-          '</div>' +
-          
-          '<div class="bg-gray-50 rounded-lg p-4">' +
-            '<div class="flex items-center justify-between mb-2">' +
-              '<span class="text-sm font-medium text-gray-700">Progress</span>' +
-              '<span class="text-sm text-gray-600">' + passed + ' of ' + total + ' tests passed</span>' +
-            '</div>' +
-            '<div class="w-full bg-gray-200 rounded-full h-3">' +
-              '<div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500" style="width: ' + passPercent + '%"></div>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    let testIndex = 0;
-    let globalTestNumber = 0;
-    Object.entries(grouped).forEach(([suite, tests]) => {
-      const passed = tests.filter(t => t.status === "passed");
-      const failed = tests.filter(t => t.status === "failed");
-      const totalTests = tests.length;
-      const hasFailure = failed.length > 0;
-
-      const suiteSection = document.createElement("details");
-      suiteSection.className = "mb-8 p-4 rounded shadow border " + (hasFailure ? 'bg-red-50 border-red-400' : 'bg-green-50 border-green-300');
-      suiteSection.open = hasFailure; // open if failed, else collapsed
-
-      const suiteTitle = document.createElement("summary");
-      suiteTitle.className = "cursor-pointer text-xl font-semibold mb-2 " + (hasFailure ? 'text-red-600' : 'text-green-700');
-      suiteTitle.innerHTML = '📦 Suite: ' + suite + ' <span class="text-sm font-normal text-gray-600">(' + totalTests + ' Test' + (totalTests !== 1 ? 's' : '') + ')</span>';
-      suiteSection.appendChild(suiteTitle);
-
-      // Create a table instead of list
-      let htmlBody = '<div class="overflow-x-auto mt-4">' +
-        '<table class="min-w-full bg-white border border-gray-300 rounded-lg">' +
-        '<thead class="bg-gray-200">' +
-        '<tr>' +
-        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Sr No</th>' +
-        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Description</th>' +
-        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Status</th>' +
-        '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Error</th>' +
-        '</tr>' +
-        '</thead>' +
-        '<tbody class="divide-y divide-gray-200">';
-      
-      tests.forEach((test, index) => {
-        globalTestNumber++;
-        const testNumber = globalTestNumber;
-        
-        if (test.status === 'passed') {
-          htmlBody += '<tr>' +
-            '<td class="px-4 py-3 text-sm font-medium text-gray-900">' + testNumber + '</td>' +
-            '<td class="px-4 py-3 text-sm text-gray-900">' + test.testName + '</td>' +
-            '<td class="px-4 py-3 text-sm"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✅ Passed</span></td>' +
-            '<td class="px-4 py-3 text-sm text-gray-500">-</td>' +
-            '</tr>';
-        } else {
-          // New: render each failed expect independently if present
-          const failures = Array.isArray(test.expectFailed) ? test.expectFailed : [];
-          
-          // Start the failed test row
-          htmlBody += '<tr class="bg-red-50">' +
-            '<td class="px-4 py-3 text-sm font-medium text-gray-900 align-top">' + testNumber + '</td>' +
-            '<td class="px-4 py-3 text-sm text-gray-900 align-top font-medium">' + test.testName + '</td>' +
-            '<td class="px-4 py-3 text-sm align-top"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">❌ Failed</span></td>' +
-            '<td class="px-4 py-3 text-sm align-top">' +
-            '<div class="space-y-2">';
-
-          if (failures.length > 0) {
-            failures.forEach((f, fIndex) => {
-              const preId = 'trace-' + (testIndex++);
-              const fullStack = (f.stackTrace || '').toString();
-              const shortStack = fullStack.split('\n').slice(0, 2).join('\n');
-              const hasLocation = !!(f.filePath && f.lineNumber);
-
-              if (fIndex > 0) htmlBody += '<hr class="my-2 border-gray-300">';
-              
-              htmlBody += '<div class="mb-2">';
-              if (f.reason) {
-                htmlBody += '<div class="text-red-700 font-medium mb-1">• ' + escapeHtml(f.reason.toString().split('\n')[0]) + '</div>';
-              }
-              if (hasLocation) {
-                htmlBody += '<div class="flex items-center gap-2 mt-1">' +
-                  '<button onclick="navigateToTest(\'' + f.filePath + '\', ' + f.lineNumber + ')" ' +
-                  'class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors">' +
-                  '🔍 Line ' + f.lineNumber +
-                  '</button>' +
-                  '<span class="text-xs text-gray-600">' + f.filePath + '</span>' +
-                '</div>';
-              }
-              if (fullStack) {
-                htmlBody += '<details class="mt-1"><summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">📄 View stack trace</summary>' +
-                  '<pre class="bg-gray-100 p-2 rounded text-xs mt-1 whitespace-pre-wrap overflow-auto max-h-32">' + escapeHtml(fullStack) + '</pre></details>';
-              }
-              htmlBody += '</div>';
-            });
-          } else {
-            // Fallback legacy single error rendering
-            const preId = 'trace-' + (testIndex++);
-            const fullStack = (test.stackTrace || '').toString();
-            const hasLocation = !!(test.filePath && test.lineNumber);
-            
-            if (test.reason) {
-              htmlBody += '<div class="text-red-700 font-medium mb-1">' + escapeHtml(test.reason.toString().split('\n')[0]) + '</div>';
-            }
-            if (hasLocation) {
-              htmlBody += '<div class="flex items-center gap-2 mt-1">' +
-                '<button onclick="navigateToTest(\'' + test.filePath + '\', ' + test.lineNumber + ')" ' +
-                'class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors">' +
-                '🔍 Line ' + test.lineNumber +
-                '</button>' +
-                '<span class="text-xs text-gray-600">' + test.filePath + '</span>' +
-              '</div>';
-            }
-            if (fullStack) {
-              htmlBody += '<details class="mt-1"><summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">📄 View stack trace</summary>' +
-                '<pre class="bg-gray-100 p-2 rounded text-xs mt-1 whitespace-pre-wrap overflow-auto max-h-32">' + escapeHtml(fullStack) + '</pre></details>';
-            }
-          }
-
-          // Screenshot if available
-          if (test.screenshotPath) {
-            htmlBody += 
-              '<div class="mt-2">' +
-                '<details><summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">📸 View screenshot</summary>' +
-                '<div class="border border-gray-300 rounded-lg overflow-hidden mt-2">' +
-                  '<img src="' + test.screenshotPath + '" alt="Test failure screenshot" class="w-full max-w-sm cursor-pointer hover:opacity-90 transition-opacity" onclick="openScreenshotModal(this.src)" />' +
-                '</div></details>' +
-              '</div>';
-          }
-
-          htmlBody += '</div></td></tr>';
+    
+    // Set timestamp
+    document.getElementById('report-timestamp').textContent = 'Generated on: ' + new Date().toLocaleString();
+    
+    // Initialize all dashboard sections
+    initializeOverview();
+    initializeTestsTable();
+    initializeFailedTable();
+    initializeSuitesDetail();
+    
+    function calculateTotalDuration() {
+      let totalMs = 0;
+      testData.results.forEach(test => {
+        if (test.duration !== undefined && test.duration !== null) {
+          totalMs += test.duration;
         }
       });
       
-      htmlBody += '</tbody></table></div>';
-
-      suiteSection.insertAdjacentHTML('beforeend', htmlBody);
-      reportDiv.appendChild(suiteSection);
-    });
-
-    function navigateToTest(filePath, lineNumber) {
-      // Get the current HTML file's location to construct absolute path
-      const currentLocation = window.location.href;
-      const htmlFileIndex = currentLocation.lastIndexOf('/');
-      const basePath = currentLocation.substring(0, htmlFileIndex);
-      
-      // Go up one level from testmate folder to get project root
-      const projectRootIndex = basePath.lastIndexOf('/testmate');
-      const projectRoot = projectRootIndex !== -1 
-          ? basePath.substring(0, projectRootIndex)
-          : basePath;
-      
-      // Convert file:// URL to regular file path
-      let absolutePath = projectRoot + '/' + filePath;
-      
-      // Remove file:// protocol if present
-      if (absolutePath.startsWith('file://')) {
-        absolutePath = absolutePath.substring(7); // Remove 'file://'
+      if (totalMs === 0) {
+        return "N/A";
       }
       
-      // Handle macOS file:// URLs (they have an extra slash)
-      if (absolutePath.startsWith('//')) {
-        absolutePath = absolutePath.substring(1); // Remove extra slash
+      const totalSeconds = totalMs / 1000;
+      
+      if (totalSeconds < 60) {
+        return totalSeconds.toFixed(1) + "s";
+      } else if (totalSeconds < 3600) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = (totalSeconds % 60).toFixed(1);
+        return minutes + "m " + seconds + "s";
+      } else {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = (totalSeconds % 60).toFixed(1);
+        return hours + "h " + minutes + "m " + seconds + "s";
       }
+    }
+    
+    function initializeOverview() {
+      const summaryDiv = document.getElementById("summary");
+      summaryDiv.innerHTML = 
+        '<div class="flex flex-wrap gap-6 mb-8">' +
+          '<div class="bg-red-50 border border-red-200 rounded-lg p-6 flex-1 min-w-64 shadow-sm">' +
+            '<div class="flex items-center justify-between">' +
+              '<div>' +
+                '<h3 class="text-sm font-medium text-red-800 mb-2">Total Failures</h3>' +
+                '<div class="text-4xl font-bold text-red-900 mb-1">' + failed + '</div>' +
+                '<div class="text-sm text-red-700">' + ((failed / total) * 100).toFixed(1) + '% of all tests</div>' +
+              '</div>' +
+              '<div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">' +
+                '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
+                  '<path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"></path>' +
+                '</svg>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bg-green-50 border border-green-200 rounded-lg p-6 flex-1 min-w-64 shadow-sm">' +
+            '<div class="flex items-center justify-between">' +
+              '<div>' +
+                '<h3 class="text-sm font-medium text-green-800 mb-2">Passed Tests</h3>' +
+                '<div class="text-4xl font-bold text-green-900 mb-1">' + passed + '</div>' +
+                '<div class="text-sm text-green-700">' + ((passed / total) * 100).toFixed(1) + '% of all tests</div>' +
+              '</div>' +
+              '<div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">' +
+                '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
+                  '<path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path>' +
+                '</svg>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bg-blue-50 border border-blue-200 rounded-lg p-6 flex-1 min-w-64 shadow-sm">' +
+            '<div class="flex items-center justify-between">' +
+              '<div>' +
+                '<h3 class="text-sm font-medium text-blue-800 mb-2">Test Suites</h3>' +
+                '<div class="text-4xl font-bold text-blue-900 mb-1">' + Object.keys(grouped).length + '</div>' +
+                '<div class="text-sm text-blue-700">Total test groups</div>' +
+              '</div>' +
+              '<div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">' +
+                '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
+                  '<path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>' +
+                '</svg>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bg-purple-50 border border-purple-200 rounded-lg p-6 flex-1 min-w-64 shadow-sm">' +
+            '<div class="flex items-center justify-between">' +
+              '<div>' +
+                '<h3 class="text-sm font-medium text-purple-800 mb-2">Total Duration</h3>' +
+                '<div class="text-4xl font-bold text-purple-900 mb-1" id="total-duration">' + calculateTotalDuration() + '</div>' +
+                '<div class="text-sm text-purple-700">Complete test execution time</div>' +
+              '</div>' +
+              '<div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">' +
+                '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">' +
+                  '<path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"></path>' +
+                '</svg>' +
+              '</div>' +
+            </div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">' +
+          '<h3 class="text-lg font-semibold text-gray-900 mb-4">Overall Progress</h3>' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<span class="text-sm font-medium text-gray-700">Pass Rate</span>' +
+            '<span class="text-sm text-gray-600">' + passed + ' of ' + total + ' tests passed</span>' +
+          '</div>' +
+          '<div class="w-full bg-gray-200 rounded-full h-3">' +
+            '<div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500" style="width: ' + passPercent + '%"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bg-white rounded-lg shadow-sm border border-gray-200">' +
+          '<div class="px-6 py-4 border-b border-gray-200">' +
+            '<h3 class="text-lg font-semibold text-gray-900">All Tests Overview</h3>' +
+            '<p class="text-sm text-gray-600 mt-1">Complete list of all executed tests with their status</p>' +
+          '</div>' +
+          '<div class="p-6">' +
+            '<div id="overview-tests-table" class="table-container">' +
+              '<!-- Overview tests table will be populated here -->' +
+            '</div>' +
+          '</div>' +
+        '</div>';
       
-      console.log('Current location:', currentLocation);
-      console.log('Project root:', projectRoot);
-      console.log('Absolute path:', absolutePath);
-      
-      // Try different IDE protocols
-      const protocols = [
-        // Cursor IDE (primary)
-        'cursor://file/' + encodeURIComponent(absolutePath) + ':' + lineNumber,
-        // VS Code
-        'vscode://file/' + encodeURIComponent(absolutePath) + ':' + lineNumber,
-        // IntelliJ IDEA / Android Studio
-        'idea://open?file=' + encodeURIComponent(absolutePath) + '&line=' + lineNumber,
-        // Sublime Text
-        'subl://' + encodeURIComponent(absolutePath) + ':' + lineNumber,
-        // Atom
-        'atom://open?url=file://' + encodeURIComponent(absolutePath) + '&line=' + lineNumber,
-        // Vim (if using vim-remote)
-        'vim://' + encodeURIComponent(absolutePath) + ':' + lineNumber
-      ];
+      // Populate the overview tests table
+      initializeOverviewTestsTable();
+    }
+    
+    function initializeOverviewTestsTable() {
+      const overviewTestsDiv = document.getElementById("overview-tests-table");
+      let tableHTML = '<table class="min-w-full divide-y divide-gray-200">' +
+        '<thead class="bg-gray-50">' +
+          '<tr>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Name</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error Summary</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody class="bg-white divide-y divide-gray-200">';
 
-      // Try to open with the first available protocol
-      let opened = false;
-      for (const protocol of protocols) {
-        try {
-          window.open(protocol, '_blank');
-          opened = true;
-          console.log('Attempting to open: ' + protocol);
-          break;
-        } catch (e) {
-          console.log('Failed to open with ' + protocol + ':', e);
+      testData.results.forEach((test, index) => {
+        const statusClass = test.status === "passed" ? "status-passed" : "status-failed";
+        const statusText = test.status === "passed" ? "✅ Passed" : "❌ Failed";
+        const rowClass = test.status === "passed" ? "bg-green-50" : "bg-red-50";
+        
+        // Calculate actual duration from test data
+        let duration = "N/A";
+        if (test.duration !== undefined && test.duration !== null) {
+          const durationMs = test.duration;
+          const durationSeconds = durationMs / 1000; // Keep decimal precision
+          
+          if (durationSeconds < 60) {
+            duration = durationSeconds.toFixed(1) + "s";
+          } else if (durationSeconds < 3600) {
+            const minutes = Math.floor(durationSeconds / 60);
+            const seconds = (durationSeconds % 60).toFixed(1);
+            duration = minutes + "m " + seconds + "s";
+          } else {
+            const hours = Math.floor(durationSeconds / 3600);
+            const minutes = Math.floor((durationSeconds % 3600) / 60);
+            const seconds = (durationSeconds % 60).toFixed(1);
+            duration = hours + "h " + minutes + "m " + seconds + "s";
+          }
+        } else {
+          // Fallback estimate if duration is not available
+          duration = "~4s";
         }
-      }
+        
+        // Format error summary
+        let errorSummary = '';
+        if (test.status === "failed") {
+          if (test.expectFailed && Array.isArray(test.expectFailed) && test.expectFailed.length > 0) {
+            errorSummary = test.expectFailed.length + ' expectation' + (test.expectFailed.length !== 1 ? 's' : '') + ' failed';
+          } else if (test.reason) {
+            const firstLine = test.reason.split('\n')[0];
+            errorSummary = firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
+          } else {
+            errorSummary = 'Test failed';
+          }
+        } else {
+          errorSummary = '-';
+        }
 
-      if (!opened) {
-        // Fallback: Show file path and line number for manual navigation
-        alert('Unable to open IDE automatically.\n\nFile: ' + filePath + '\nLine: ' + lineNumber + '\n\nPlease open this file manually in your IDE.');
+        tableHTML += '<tr class="' + rowClass + '">' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + test.testName + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + test.suite + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap">' +
+            '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+          '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + duration + '</td>' +
+          '<td class="px-6 py-4 text-sm text-gray-500">' + errorSummary + '</td>' +
+        '</tr>';
+      });
+
+      tableHTML += '</tbody></table>';
+      overviewTestsDiv.innerHTML = tableHTML;
+    }
+    
+    
+    function initializeTestsTable() {
+      const testsTableDiv = document.getElementById("tests-table");
+      let tableHTML = '<table class="min-w-full divide-y divide-gray-200">' +
+        '<thead class="bg-gray-50">' +
+          '<tr>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Name</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error Details</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody class="bg-white divide-y divide-gray-200">';
+      
+      testData.results.forEach((test, index) => {
+        const statusClass = test.status === "passed" ? "status-passed" : "status-failed";
+        const statusText = test.status === "passed" ? "✅ Passed" : "❌ Failed";
+        const rowClass = test.status === "passed" ? "bg-green-50" : "bg-red-50";
+        
+        // Calculate duration
+        let duration = "N/A";
+        if (test.duration !== undefined && test.duration !== null) {
+          const durationMs = test.duration;
+          const durationSeconds = durationMs / 1000;
+          
+          if (durationSeconds < 60) {
+            duration = durationSeconds.toFixed(1) + "s";
+          } else if (durationSeconds < 3600) {
+            const minutes = Math.floor(durationSeconds / 60);
+            const seconds = (durationSeconds % 60).toFixed(1);
+            duration = minutes + "m " + seconds + "s";
+          } else {
+            const hours = Math.floor(durationSeconds / 3600);
+            const minutes = Math.floor((durationSeconds % 3600) / 60);
+            const seconds = (durationSeconds % 60).toFixed(1);
+            duration = hours + "h " + minutes + "m " + seconds + "s";
+          }
+        }
+        
+        // Format error details with multiple expect failures
+        let errorDetails = '';
+        if (test.status === "failed") {
+          if (test.expectFailed && Array.isArray(test.expectFailed) && test.expectFailed.length > 0) {
+            errorDetails = '<div class="space-y-2">';
+            test.expectFailed.forEach((failure, idx) => {
+              errorDetails += '<div class="border-l-4 border-red-400 pl-3">';
+              errorDetails += '<div class="text-sm font-medium text-red-800">Expectation ' + (idx + 1) + ':</div>';
+              errorDetails += '<div class="text-sm text-red-700">' + formatReason(failure.reason || failure) + '</div>';
+              if (failure.stackTrace) {
+                errorDetails += '<details class="mt-1">';
+                errorDetails += '<summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Stack Trace</summary>';
+                errorDetails += '<pre class="text-xs text-gray-600 mt-1 bg-gray-100 p-2 rounded overflow-x-auto">' + escapeHtml(failure.stackTrace) + '</pre>';
+                errorDetails += '</details>';
+              }
+              errorDetails += '</div>';
+            });
+            errorDetails += '</div>';
+          } else if (test.reason) {
+            errorDetails = formatReason(test.reason);
+            if (test.stackTrace) {
+              errorDetails += '<details class="mt-2">';
+              errorDetails += '<summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Stack Trace</summary>';
+              errorDetails += '<pre class="text-xs text-gray-600 mt-1 bg-gray-100 p-2 rounded overflow-x-auto">' + escapeHtml(test.stackTrace) + '</pre>';
+              errorDetails += '</details>';
+            }
+          }
+        }
+
+        tableHTML += '<tr class="' + rowClass + '">' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + test.testName + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + test.suite + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap">' +
+            '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+          '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + duration + '</td>' +
+          '<td class="px-6 py-4 text-sm text-gray-500">' + errorDetails + '</td>' +
+        '</tr>';
+      });
+      
+      tableHTML += '</tbody></table>';
+      testsTableDiv.innerHTML = tableHTML;
+    }
+    
+    function initializeFailedTable() {
+      const failedTests = testData.results.filter(t => t.status === "failed");
+      const failedTableDiv = document.getElementById("failed-table");
+      
+      if (failedTests.length === 0) {
+        failedTableDiv.innerHTML = '<div class="text-center py-8 text-gray-500">No failed tests found! 🎉</div>';
+        return;
       }
+      
+      let tableHTML = '<table class="min-w-full divide-y divide-gray-200">' +
+        '<thead class="bg-gray-50">' +
+          '<tr>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Name</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Suite</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error Details</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody class="bg-white divide-y divide-gray-200">';
+      
+      failedTests.forEach((test) => {
+        // Calculate duration
+        let duration = "N/A";
+        if (test.duration !== undefined && test.duration !== null) {
+          const durationMs = test.duration;
+          const durationSeconds = durationMs / 1000;
+          
+          if (durationSeconds < 60) {
+            duration = durationSeconds.toFixed(1) + "s";
+          } else if (durationSeconds < 3600) {
+            const minutes = Math.floor(durationSeconds / 60);
+            const seconds = (durationSeconds % 60).toFixed(1);
+            duration = minutes + "m " + seconds + "s";
+          } else {
+            const hours = Math.floor(durationSeconds / 3600);
+            const minutes = Math.floor((durationSeconds % 3600) / 60);
+            const seconds = (durationSeconds % 60).toFixed(1);
+            duration = hours + "h " + minutes + "m " + seconds + "s";
+          }
+        }
+        
+        // Format error details with multiple expect failures
+        let errorDetails = '';
+        if (test.expectFailed && Array.isArray(test.expectFailed) && test.expectFailed.length > 0) {
+          errorDetails = '<div class="space-y-2">';
+          test.expectFailed.forEach((failure, idx) => {
+            errorDetails += '<div class="border-l-4 border-red-400 pl-3">';
+            errorDetails += '<div class="text-sm font-medium text-red-800">Expectation ' + (idx + 1) + ':</div>';
+            errorDetails += '<div class="text-sm text-red-700">' + formatReason(failure.reason || failure) + '</div>';
+            if (failure.stackTrace) {
+              errorDetails += '<details class="mt-1">';
+              errorDetails += '<summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Stack Trace</summary>';
+              errorDetails += '<pre class="text-xs text-gray-600 mt-1 bg-gray-100 p-2 rounded overflow-x-auto">' + escapeHtml(failure.stackTrace) + '</pre>';
+              errorDetails += '</details>';
+            }
+            errorDetails += '</div>';
+          });
+          errorDetails += '</div>';
+        } else if (test.reason) {
+          errorDetails = formatReason(test.reason);
+          if (test.stackTrace) {
+            errorDetails += '<details class="mt-2">';
+            errorDetails += '<summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Stack Trace</summary>';
+            errorDetails += '<pre class="text-xs text-gray-600 mt-1 bg-gray-100 p-2 rounded overflow-x-auto">' + escapeHtml(test.stackTrace) + '</pre>';
+            errorDetails += '</details>';
+          }
+        }
+
+        tableHTML += '<tr class="bg-red-50">' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + test.testName + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + test.suite + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + duration + '</td>' +
+          '<td class="px-6 py-4 text-sm text-gray-500">' + errorDetails + '</td>' +
+        '</tr>';
+      });
+      
+      tableHTML += '</tbody></table>';
+      failedTableDiv.innerHTML = tableHTML;
+    }
+    
+    function initializeSuitesDetail() {
+      // First, populate the summary table
+      const suitesSummaryDiv = document.getElementById("suites-summary-table");
+      let summaryTableHTML = '<table class="min-w-full divide-y divide-gray-200">' +
+        '<thead class="bg-gray-50">' +
+          '<tr>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Suite</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tests</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Passed</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Failed</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass Rate</th>' +
+            '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody class="bg-white divide-y divide-gray-200">';
+      
+      Object.entries(grouped).forEach(([suiteName, tests]) => {
+        const suitePassed = tests.filter(t => t.status === "passed").length;
+        const suiteTotal = tests.length;
+        const suitePassPercent = ((suitePassed / suiteTotal) * 100).toFixed(1);
+        const suiteFailed = suiteTotal - suitePassed;
+        
+        summaryTableHTML += '<tr>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + suiteName + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + suiteTotal + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + suitePassed + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + suiteFailed + '</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + suitePassPercent + '%</td>' +
+          '<td class="px-6 py-4 whitespace-nowrap">' +
+            '<div class="w-full bg-gray-200 rounded-full h-2">' +
+              '<div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style="width: ' + suitePassPercent + '%"></div>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      });
+      
+      summaryTableHTML += '</tbody></table>';
+      suitesSummaryDiv.innerHTML = summaryTableHTML;
+      
+      // Then, populate the expandable suite details
+      const suitesDetailDiv = document.getElementById("suites-detail-content");
+      let contentHTML = '';
+      
+      Object.entries(grouped).forEach(([suiteName, tests]) => {
+        const suitePassed = tests.filter(t => t.status === "passed").length;
+        const suiteTotal = tests.length;
+        const suitePassPercent = ((suitePassed / suiteTotal) * 100).toFixed(1);
+        const suiteFailed = suiteTotal - suitePassed;
+        const hasFailure = suiteFailed > 0;
+        
+        contentHTML += '<details class="mb-6 p-4 rounded-lg shadow border ' + 
+          (hasFailure ? 'bg-red-50 border-red-400' : 'bg-green-50 border-green-300') + 
+          '" ' + (hasFailure ? 'open' : '') + '>';
+        
+        contentHTML += '<summary class="cursor-pointer text-lg font-semibold mb-4 ' + 
+          (hasFailure ? 'text-red-600' : 'text-green-700') + '">';
+        contentHTML += '📦 ' + suiteName + ' ';
+        contentHTML += '<span class="text-sm font-normal text-gray-600">(' + suiteTotal + ' Test' + (suiteTotal !== 1 ? 's' : '') + ')</span>';
+        contentHTML += '<span class="ml-4 text-sm font-normal ' + (hasFailure ? 'text-red-600' : 'text-green-600') + '">' + suitePassPercent + '% Pass Rate</span>';
+        contentHTML += '</summary>';
+        
+        // Create table for tests in this suite
+        contentHTML += '<div class="overflow-x-auto mt-4">';
+        contentHTML += '<table class="min-w-full bg-white border border-gray-300 rounded-lg">';
+        contentHTML += '<thead class="bg-gray-200">';
+        contentHTML += '<tr>';
+        contentHTML += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Test Name</th>';
+        contentHTML += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Status</th>';
+        contentHTML += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Duration</th>';
+        contentHTML += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">Error Details</th>';
+        contentHTML += '</tr>';
+        contentHTML += '</thead>';
+        contentHTML += '<tbody class="divide-y divide-gray-200">';
+        
+        tests.forEach((test, index) => {
+          const statusClass = test.status === "passed" ? "status-passed" : "status-failed";
+          const statusText = test.status === "passed" ? "✅ Passed" : "❌ Failed";
+          const rowClass = test.status === "passed" ? "bg-green-50" : "bg-red-50";
+          
+          // Calculate duration
+          let duration = "N/A";
+          if (test.duration !== undefined && test.duration !== null) {
+            const durationMs = test.duration;
+            const durationSeconds = durationMs / 1000;
+            
+            if (durationSeconds < 60) {
+              duration = durationSeconds.toFixed(1) + "s";
+            } else if (durationSeconds < 3600) {
+              const minutes = Math.floor(durationSeconds / 60);
+              const seconds = (durationSeconds % 60).toFixed(1);
+              duration = minutes + "m " + seconds + "s";
+            } else {
+              const hours = Math.floor(durationSeconds / 3600);
+              const minutes = Math.floor((durationSeconds % 3600) / 60);
+              const seconds = (durationSeconds % 60).toFixed(1);
+              duration = hours + "h " + minutes + "m " + seconds + "s";
+            }
+          }
+          
+          // Format error details with multiple expect failures
+          let errorDetails = '';
+          if (test.status === "failed") {
+            if (test.expectFailed && Array.isArray(test.expectFailed) && test.expectFailed.length > 0) {
+              errorDetails = '<div class="space-y-2">';
+              test.expectFailed.forEach((failure, idx) => {
+                errorDetails += '<div class="border-l-4 border-red-400 pl-3">';
+                errorDetails += '<div class="text-sm font-medium text-red-800">Expectation ' + (idx + 1) + ':</div>';
+                errorDetails += '<div class="text-sm text-red-700">' + formatReason(failure.reason || failure) + '</div>';
+                if (failure.stackTrace) {
+                  errorDetails += '<details class="mt-1">';
+                  errorDetails += '<summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Stack Trace</summary>';
+                  errorDetails += '<pre class="text-xs text-gray-600 mt-1 bg-gray-100 p-2 rounded overflow-x-auto">' + escapeHtml(failure.stackTrace) + '</pre>';
+                  errorDetails += '</details>';
+                }
+                errorDetails += '</div>';
+              });
+              errorDetails += '</div>';
+            } else if (test.reason) {
+              errorDetails = formatReason(test.reason);
+              if (test.stackTrace) {
+                errorDetails += '<details class="mt-2">';
+                errorDetails += '<summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-800">Show Stack Trace</summary>';
+                errorDetails += '<pre class="text-xs text-gray-600 mt-1 bg-gray-100 p-2 rounded overflow-x-auto">' + escapeHtml(test.stackTrace) + '</pre>';
+                errorDetails += '</details>';
+              }
+            }
+          }
+          
+          contentHTML += '<tr class="' + rowClass + '">';
+          contentHTML += '<td class="px-4 py-3 text-sm font-medium text-gray-900">' + test.testName + '</td>';
+          contentHTML += '<td class="px-4 py-3 text-sm">';
+          contentHTML += '<span class="status-badge ' + statusClass + '">' + statusText + '</span>';
+          contentHTML += '</td>';
+          contentHTML += '<td class="px-4 py-3 text-sm text-gray-500">' + duration + '</td>';
+          contentHTML += '<td class="px-4 py-3 text-sm text-gray-500">' + errorDetails + '</td>';
+          contentHTML += '</tr>';
+        });
+        
+        contentHTML += '</tbody></table>';
+        contentHTML += '</div>';
+        contentHTML += '</details>';
+      });
+      
+      suitesDetailDiv.innerHTML = contentHTML;
     }
   </script>
 </body>

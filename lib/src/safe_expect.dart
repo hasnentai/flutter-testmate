@@ -45,6 +45,7 @@ class TestFailureInfo {
   final List<Map<String, dynamic>> expectFailed;
   final String status;
   final DateTime timestamp;
+  final Duration? duration;
 
   TestFailureInfo({
     required this.testName,
@@ -52,6 +53,7 @@ class TestFailureInfo {
     required this.expectFailed,
     required this.status,
     DateTime? timestamp,
+    this.duration,
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -60,6 +62,7 @@ class TestFailureInfo {
     'expectFailed': expectFailed,
     'status': status,
     'timestamp': timestamp.toIso8601String(),
+    'duration': duration?.inMilliseconds,
   };
 }
 
@@ -122,6 +125,7 @@ class SafeExpect {
   static final List<TestFailureInfo> _testResults = [];
   static String? _currentTestName;
   static String? _currentTestSuite;
+  static DateTime? _testStartTime;
   // Note: we now capture per-expect failure metadata instead of global last stack
   
   /// Start tracking a new test
@@ -145,6 +149,7 @@ class SafeExpect {
   /// This extracts test name and group from the captured context
   static void startTestFromContext() {
     _failedExpects.clear();
+    _testStartTime = DateTime.now();
   }
   
   /// Execute an expect statement with error catching
@@ -203,11 +208,17 @@ class SafeExpect {
   static void _recordTestResult() {
     if (_currentTestName != null) {
       final status = hasFailures ? 'Failed' : 'Passed';
+      final endTime = DateTime.now();
+      final duration = _testStartTime != null 
+          ? endTime.difference(_testStartTime!)
+          : null;
+      
       _testResults.add(TestFailureInfo(
         testName: _currentTestName!,
         testSuite: _currentTestSuite ?? 'Default Suite',
         expectFailed: List<Map<String, dynamic>>.from(_failedExpects),
         status: status,
+        duration: duration,
       ));
     }
   }
