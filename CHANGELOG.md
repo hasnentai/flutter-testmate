@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2024-01-XX
+## [1.0.0] 
 
 ### Added
 - 🎉 Initial release of TestMate
@@ -44,3 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flutter 3.19.0+ compatibility
 - Comprehensive unit test coverage
 - MIT License for open source use
+
+
+## [1.0.4] 
+
+### Added
+- Tag based filtering 
+- Improved UI/UX for html report
