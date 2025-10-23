@@ -1,7 +1,7 @@
 name: flutter_testmate
 description: Testmate is a Flutter test utility package that provides a comprehensive suite of tools for testing and reporting Flutter applications.
 version: 1.0.5
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/hasnentai/flutter-testmate.git
 
 environment:
   sdk: ^3.6.1
