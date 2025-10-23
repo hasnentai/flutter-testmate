@@ -343,7 +343,7 @@ Map<String, dynamic>? _parseTestFunction(List<String> lines, int startIndex) {
         
         for (int j = i; j < lines.length; j++) {
           final tagLine = lines[j];
-          tagContent += tagLine + '\n';
+          tagContent += '$tagLine\n';
           
           // Count brackets to find the end of the tag array
           bracketCount += tagLine.split('[').length - 1;

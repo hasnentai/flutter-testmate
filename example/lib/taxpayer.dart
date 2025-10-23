@@ -35,8 +35,8 @@ class _TaxpayerFormScreenState extends State<TaxpayerFormScreen> {
                     Text('Register', style: TextStyle(color: Colors.grey, fontSize: 14)),
                   ],
                 ),
-                const SizedBox(height: 32),
-                Text('Details of Taxpayer as per PAN', style: TextStyle(color: Color(0xFF2B4A9D), fontSize: 28, fontWeight: FontWeight.w600)),
+         
+               
                 const SizedBox(height: 32),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -54,7 +54,7 @@ class _TaxpayerFormScreenState extends State<TaxpayerFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('1. The entered details should be as per PAN database.', style: TextStyle(color: Color(0xFF5B7FDB), fontSize: 14)),
+                            Text('1. The entered details should be as per DL database.', style: TextStyle(color: Color(0xFF5B7FDB), fontSize: 14)),
                             const SizedBox(height: 4),
                             Text('2. There are 3 attempts to enter correct details.', style: TextStyle(color: Color(0xFF5B7FDB), fontSize: 14)),
                           ],
@@ -64,12 +64,12 @@ class _TaxpayerFormScreenState extends State<TaxpayerFormScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildFieldLabel('Enter PAN of Taxpayer', isRequired: true),
+                _buildFieldLabel('Enter DL Name', isRequired: true),
                 const SizedBox(height: 8),
-                _buildTextField(_panController, 'Enter PAN of Taxpayer', hasError: _showPanError),
+                _buildTextField(_panController, 'Enter DL of Name', hasError: _showPanError),
                 if (_showPanError) ...[
                   const SizedBox(height: 4),
-                  Text('Invalid PAN, please re-enter', style: TextStyle(color: Color(0xFFD32F2F), fontSize: 12)),
+                  Text('Invalid DL, please re-enter', style: TextStyle(color: Color(0xFFD32F2F), fontSize: 12)),
                 ],
                 const SizedBox(height: 24),
                 Row(
