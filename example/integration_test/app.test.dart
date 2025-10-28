@@ -21,8 +21,12 @@ void main() {
 
       // NEW SIMPLIFIED SYNTAX - Just use expect() directly!
       // No need for SafeExpect.catchError() wrapper anymore
+
+      tester.ensureVisible(find.text('First Name1'));
       final panLabel = find.text('First Name1');
       expect(panLabel, findsOneWidget);
+
+
 
       final panLabel1 = find.text('First Name2');
       expect(panLabel1, findsOneWidget);

@@ -10,6 +10,7 @@ void main() {
 
           app.main();
           await tester.pumpAndSettle(const Duration(seconds: 2));
+          tester.ensureVisible(find.text("Dashboard"));
 
           expect(find.text("Dashboard"), findsOneWidget);
           expect(find.text("Dashboard"), findsOneWidget);

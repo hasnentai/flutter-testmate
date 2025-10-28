@@ -92,7 +92,28 @@ void testWidgets(String description, flutter_test.WidgetTesterCallback callback,
     print('🔍 Debug - Test executing with group: $capturedGroupName');
     // Automatically start tracking - no need to call startTestFromContext manually
     SafeExpect.startTestFromContext();
-    await callback(tester);
+    
+    try {
+      await callback(tester);
+      // If we reach here, the test passed without exceptions
+      SafeExpect._recordTestResult();
+    } catch (e, stackTrace) {
+      // Catch any exceptions thrown during test execution
+      print('❌ Test crashed with exception: $e');
+      
+      // Record the failure with the exception details
+      SafeExpect._failedExpects.add({
+        'reason': 'Test crashed: ${e.toString()}',
+        'stackTrace': stackTrace.toString(),
+        'type': 'Test Exception',
+      });
+      
+      // Mark the test as failed
+      SafeExpect._recordTestResult();
+      
+      // Re-throw to let Flutter test framework handle it
+      rethrow;
+    }
   }, skip: skip, timeout: timeout, semanticsEnabled: semanticsEnabled, variant: variant, tags: tags);
 }
 
