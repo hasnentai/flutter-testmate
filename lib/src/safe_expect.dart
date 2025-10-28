@@ -95,8 +95,15 @@ void testWidgets(String description, flutter_test.WidgetTesterCallback callback,
     
     try {
       await callback(tester);
-      // If we reach here, the test passed without exceptions
-      SafeExpect._recordTestResult();
+      // If we reach here, the test completed without exceptions
+      // Check if any expects failed during the test
+      if (SafeExpect._failedExpects.isNotEmpty) {
+        // Test failed due to expect failures
+        SafeExpect._recordTestResult();
+      } else {
+        // Test passed - record as passed
+        SafeExpect._recordTestResult();
+      }
     } catch (e, stackTrace) {
       // Catch any exceptions thrown during test execution
       print('❌ Test crashed with exception: $e');
@@ -127,18 +134,18 @@ void testmateTestWidgets(String description, flutter_test.WidgetTesterCallback c
   testWidgets(description, callback);
 }
 
-/// Override the default expect function to automatically use SafeExpect.catchError
-/// This allows you to write: expect(actual, matcher) instead of SafeExpect.catchError(() => expect(actual, matcher))
-void expect(
-  dynamic actual,
-  dynamic matcher, {
-  String? reason,
-  dynamic skip, // ignore: avoid_annotating_with_dynamic
-}) {
-  SafeExpect.catchError(() {
-    flutter_test.expect(actual, matcher, reason: reason, skip: skip);
-  });
-}
+  /// Override the default expect function to automatically use SafeExpect.catchError
+  /// This allows you to write: expect(actual, matcher) instead of SafeExpect.catchError(() => expect(actual, matcher))
+  void expect(
+    dynamic actual,
+    dynamic matcher, {
+    String? reason,
+    dynamic skip, // ignore: avoid_annotating_with_dynamic
+  }) {
+    SafeExpect.catchError(() {
+      flutter_test.expect(actual, matcher, reason: reason, skip: skip);
+    }, failTest: true); // Re-throw to fail the test if expect fails
+  }
 
 /// Utility functions for safe expect operations
 class SafeExpect {

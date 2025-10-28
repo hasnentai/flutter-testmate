@@ -220,9 +220,27 @@ Future<File?> createFilteredTestFile(File originalTestFile, String targetTag, St
         // Package imports - keep as is
         filteredContent.writeln(importLine);
       } else {
-        // Relative imports - need to fix the path
-        final fixedImport = _fixRelativeImportPath(importLine, filteredTestFile.path, sourceFiles);
-        filteredContent.writeln(fixedImport);
+        // Relative imports - need to check if it's an absolute path and skip it if so
+        final normalizedPath = importLine.replaceAll('\\', '/');
+        
+        // Check for mixed absolute/relative paths (like ../../../../C:/path)
+        if (normalizedPath.contains(':/') && normalizedPath.contains('../')) {
+          print('⚠️ Skipping mixed absolute/relative path import: $importLine');
+          continue; // Skip this import
+        }
+        
+        // Check if it's an absolute path (contains drive letter like C:/ or starts with /)
+        if (normalizedPath.contains(':/') && normalizedPath.indexOf(':/') < 10) {
+          print('⚠️ Skipping absolute path import: $importLine');
+          continue; // Skip this import
+        } else if (normalizedPath.contains('://') || normalizedPath.startsWith('/')) {
+          print('⚠️ Skipping absolute Unix path import: $importLine');
+          continue; // Skip this import
+        } else {
+          // Relative imports - need to fix the path
+          final fixedImport = _fixRelativeImportPath(importLine, filteredTestFile.path, sourceFiles);
+          filteredContent.writeln(fixedImport);
+        }
       }
     }
     
@@ -393,8 +411,23 @@ String _fixRelativeImportPath(String importLine, String generatedFilePath, Set<S
   
   final originalPath = importMatch.group(1)!;
   
-  // If it's already an absolute path or package import, return as is
-  if (originalPath.startsWith('package:') || originalPath.startsWith('/')) {
+  // If it's already a package import, return as is
+  if (originalPath.startsWith('package:')) {
+    return importLine;
+  }
+  
+  // Normalize path separators (convert backslashes to forward slashes)
+  final normalizedPath = originalPath.replaceAll('\\', '/');
+  
+  // Check if it contains an absolute Windows path (starts with drive letter like C:/)
+  if (normalizedPath.contains(':/') && normalizedPath.indexOf(':/') < 3) {
+    print('⚠️ Skipping absolute path import: $originalPath');
+    return importLine;
+  }
+  
+  // Check if it already starts with / (absolute Unix path)
+  if (normalizedPath.startsWith('/')) {
+    print('⚠️ Skipping absolute Unix path import: $originalPath');
     return importLine;
   }
   
@@ -410,58 +443,103 @@ String _fixRelativeImportPath(String importLine, String generatedFilePath, Set<S
   
   if (sourceFile == null) return importLine;
   
-  // Calculate the correct relative path
-  final sourceDir = Directory(sourceFile).parent.path;
-  final generatedDir = Directory(generatedFilePath).parent.path;
-  
-  // Resolve the original import path relative to the source file
-  final originalAbsolutePath = _resolvePath(sourceDir, originalPath);
-  
-  // Calculate the relative path from the generated file to the target
-  final relativePath = _getRelativePath(generatedDir, originalAbsolutePath);
-  
-  // Replace the path in the import statement
-  return importLine.replaceFirst(originalPath, relativePath);
+  try {
+    // Calculate the correct relative path
+    final sourceDir = Directory(sourceFile).absolute.parent.path;
+    final generatedDir = Directory(generatedFilePath).absolute.parent.path;
+    
+    // Resolve the original import path relative to the source file
+    final originalAbsolutePath = _resolvePath(sourceDir, normalizedPath);
+    
+    // Verify the file exists
+    final targetFile = File(originalAbsolutePath);
+    if (!targetFile.existsSync()) {
+      print('⚠️ Target file does not exist: $originalAbsolutePath');
+      return importLine;
+    }
+    
+    // Calculate the relative path from the generated file to the target
+    final relativePath = _getRelativePath(generatedDir, originalAbsolutePath);
+    
+    // Replace the path in the import statement (keep original quotes)
+    return importLine.replaceFirst(originalPath, relativePath);
+  } catch (e) {
+    print('⚠️ Error fixing import path: $e');
+    return importLine;
+  }
 }
 
-/// Resolve a relative path against a base directory
+/// Resolve a relative path against a base directory (returns absolute path)
 String _resolvePath(String baseDir, String relativePath) {
+  // Normalize the path
   final base = Directory(baseDir);
-  final target = File('${base.path}/$relativePath');
-  return target.resolveSymbolicLinksSync();
+  final baseUri = Uri.directory(base.path);
+  final relativeUri = Uri.file(relativePath);
+  final resolvedUri = baseUri.resolve(relativeUri.path);
+  return resolvedUri.path;
 }
 
 /// Get the relative path from one directory to another
 String _getRelativePath(String fromDir, String toPath) {
-  final from = Directory(fromDir);
-  final to = File(toPath);
-  
-  final fromParts = from.path.split('/');
-  final toParts = to.path.split('/');
-  
-  // Find the common prefix
-  int commonLength = 0;
-  while (commonLength < fromParts.length && 
-         commonLength < toParts.length && 
-         fromParts[commonLength] == toParts[commonLength]) {
-    commonLength++;
+  try {
+    // Normalize paths to use forward slashes
+    String normalizePath(String path) => path.replaceAll('\\', '/');
+    
+    var from = normalizePath(Directory(fromDir).absolute.path);
+    var to = normalizePath(File(toPath).absolute.path);
+    
+    // Handle Windows drive letters
+    bool isWindows = Platform.isWindows;
+    String fromDrive = '';
+    String toDrive = '';
+    
+    if (isWindows) {
+      if (from.length > 2 && from[1] == ':') {
+        fromDrive = from.substring(0, 2);
+        from = from.substring(2);
+      }
+      if (to.length > 2 && to[1] == ':') {
+        toDrive = to.substring(0, 2);
+        to = to.substring(2);
+      }
+      
+      // If drives are different, we can't create a relative path
+      if (fromDrive.isNotEmpty && toDrive.isNotEmpty && fromDrive != toDrive) {
+        throw Exception('Cannot create relative path between different drives');
+      }
+    }
+    
+    // Split into path segments
+    final fromParts = from.split('/').where((p) => p.isNotEmpty && p != '.',).toList();
+    final toParts = to.split('/').where((p) => p.isNotEmpty && p != '.',).toList();
+    
+    // Find the common prefix
+    int commonLength = 0;
+    while (commonLength < fromParts.length && 
+           commonLength < toParts.length && 
+           fromParts[commonLength] == toParts[commonLength]) {
+      commonLength++;
+    }
+    
+    // Calculate the relative path
+    final relativeParts = <String>[];
+    
+    // Add '../' for each directory we need to go up from the source
+    for (int i = commonLength; i < fromParts.length; i++) {
+      relativeParts.add('..');
+    }
+    
+    // Add the remaining path to the target
+    for (int i = commonLength; i < toParts.length; i++) {
+      relativeParts.add(toParts[i]);
+    }
+    
+    final relativePath = relativeParts.join('/');
+    return relativePath.isEmpty ? '.' : relativePath;
+  } catch (e) {
+    print('⚠️ Error calculating relative path: $e');
+    return '.';
   }
-  
-  // Calculate the relative path
-  final relativeParts = <String>[];
-  
-  // Add '../' for each directory we need to go up from the source
-  for (int i = commonLength; i < fromParts.length; i++) {
-    relativeParts.add('..');
-  }
-  
-  // Add the remaining path to the target
-  for (int i = commonLength; i < toParts.length; i++) {
-    relativeParts.add(toParts[i]);
-  }
-  
-  final relativePath = relativeParts.join('/');
-  return relativePath.isEmpty ? '.' : relativePath;
 }
 
 /// Kill any remaining Chrome processes to ensure browser closes
